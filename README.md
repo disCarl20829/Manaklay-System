@@ -17,4 +17,5 @@ npm install express mysql2 cors dotenv
 
 
 TO TEST USE ``THUNDER CLIENT`` ON VSCODE
+
 SAMPLE LINK: ``http://localhost:3000/api/product-categories``
