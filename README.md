@@ -7,6 +7,9 @@ TO INITIALIZE PROJECCT:
 2. OPEN CMD/TERMINAL
 3. PASTE AND ENTER CODE:
    mkdir manaklay-api
+   
   cd manaklay-api
+  
   npm init -y  
+  
   npm install express mysql2 cors dotenv
