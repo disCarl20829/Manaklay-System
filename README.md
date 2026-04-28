@@ -14,3 +14,6 @@ cd manaklay-api
 npm init -y  
 
 npm install express mysql2 cors dotenv
+
+
+TO TEST USE ``THUNDER CLIENT`` ON VSCODE
