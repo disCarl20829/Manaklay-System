@@ -1,0 +1,87 @@
+.group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--white);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: var(--transition-base);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.25rem;
+}
+
+/* TOP ACCENT LINE (from your stat-card style) */
+.group::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+    transition: var(--transition-base);
+}
+
+/* FOCUS STATE */
+.group:focus-within {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 4px var(--primary-100), var(--shadow-md);
+}
+
+.group:focus-within::before {
+    width: 100%;
+}
+
+/* ICON */
+.icon {
+    padding: 0 0.9rem;
+    color: var(--gray-400);
+    font-size: 1.1rem;
+    transition: var(--transition-base);
+}
+
+/* ICON ACTIVE */
+.group:focus-within .icon {
+    color: var(--primary-600);
+}
+
+/* INPUT */
+.input {
+    flex: 1;
+    padding: 1rem;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    background: transparent;
+    color: var(--gray-900);
+}
+
+/* PLACEHOLDER */
+.input::placeholder {
+    color: var(--gray-400);
+    transition: var(--transition-fast);
+}
+
+/* Placeholder fade on focus */
+.group:focus-within .input::placeholder {
+    opacity: 0.5;
+}
+
+/* PASSWORD TOGGLE */
+.toggle {
+    padding: 0 0.9rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: var(--transition-base);
+}
+
+.toggle:hover {
+    color: var(--primary-600);
+}
+
+/* HOVER EFFECT */
+.group:hover {
+    border-color: var(--primary-300);
+    box-shadow: var(--shadow);
+}
