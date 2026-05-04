@@ -6,15 +6,17 @@ import InputField from "../components/InputField";
 
 import styles from "../components/AuthLayout.module.css";
 
-//import api from "../config/api";
+import api from "../../config/api";
+import { signup } from "../../config/auth_service";
 
-function SignIn() {
+function SignUp() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = React.useState({
     user_name: "",
     user_email: "",
     user_password: "",
+    confirm_password: ""
   });
 
   const handleChange = (key, value) => {
@@ -27,15 +29,29 @@ function SignIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      const res = await api.post("/login", formData);
+    if (formData.user_password !== formData.confirm_password) {
+      alert("Passwords do not match");
+      return;
+    }
 
-      // example redirect after login
+    try {
+      const res = await signup(formData);
+
       if (res.data.success) {
-        navigate("/dashboard");
+        alert("Signup successful! Please log in.");
+
+        navigate("/");
+      } else {
+        alert(res.data.message);
       }
+
     } catch (err) {
       console.error(err);
+
+      const message =
+        err.response?.data?.message || "Signup failed";
+
+      alert(message);
     }
   };
 
@@ -48,9 +64,18 @@ function SignIn() {
           icon="person"
           type="text"
           placeholder="Username"
-          id="user_input"
+          id="user_name"
           value={formData.user_name}
           onChange={(e) => handleChange("user_name", e.target.value)}
+        />
+
+        <InputField
+          icon="person"
+          type="text"
+          placeholder="Full Name"
+          id="full_name"
+          value={formData.full_name}
+          onChange={(e) => handleChange("full_name", e.target.value)}
         />
 
         <InputField
@@ -96,4 +121,4 @@ function SignIn() {
   );
 }
 
-export default SignIn;
+export default SignUp;

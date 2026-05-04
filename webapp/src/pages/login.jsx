@@ -6,7 +6,8 @@ import InputField from "../components/InputField";
 
 import styles from "../components/AuthLayout.module.css";
 
-//import api from "../config/api";
+import api from "../../config/api";
+import { login } from "../../config/auth_service";
 
 function SignIn() {
   const navigate = useNavigate();
@@ -27,14 +28,23 @@ function SignIn() {
     e.preventDefault();
 
     try {
-      const res = await api.post("/login", formData);
+      const res = await login(formData);
 
-      // example redirect after login
       if (res.data.success) {
+        localStorage.setItem("user", JSON.stringify(res.data.data.user));
+
         navigate("/dashboard");
+      } else {
+        alert(res.data.message);
       }
+
     } catch (err) {
       console.error(err);
+
+      const message =
+        err.response?.data?.message || "Login failed";
+
+      alert(message);
     }
   };
 

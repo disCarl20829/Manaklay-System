@@ -29,8 +29,8 @@
 }
 
 .loginContainer {
-    width: 100%;
-    max-width: 420px;
+    width: 25%;
+    max-width: 520px;
     padding: 2rem;
     position: relative;
     z-index: 1;

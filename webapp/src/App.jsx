@@ -7,6 +7,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import Login from "./pages/login.jsx";
 import Signup from "./pages/signup.jsx";
+import Dashboard from "./pages/dashboard.jsx";
+import Products from "./pages/products.jsx";
 
 function App() {
     return (
@@ -14,7 +16,9 @@ function App() {
             <Routes>
                 <Route path="/" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-                {/*<Route path="/register" element={<Register />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
+                {/*
                 <Route element={<ProtectedRoute />}>
                 </Route>*/}
             </Routes>

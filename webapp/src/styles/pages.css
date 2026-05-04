@@ -1,0 +1,35 @@
+.layout {
+  display: flex;
+}
+
+.mainContent {
+  margin-left: 260px;
+  padding: 24px;
+  width: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 28px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.right {
+  background: var(--primary-100);
+  padding: 8px 14px;
+  border-radius: 20px;
+}

@@ -4,7 +4,9 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173', // Adjust this to your frontend URL
+}));
 app.use(express.json());
 
 // ==========================================
@@ -25,47 +27,66 @@ const pool = mysql.createPool({
 // ==========================================
 
 app.post('/api/login', async(req, res) => {
-    const { username, password } = req.body;
+    const { user_input, user_password } = req.body;
     try {
         const [users] = await pool.query(
-            'SELECT user_id, username, full_name, role FROM users WHERE username = ? AND password = ?', [username, password]
+            'SELECT * FROM users WHERE (username = ? OR email = ?)', [user_input, user_input]
         );
-        if (users.length > 0) res.json({ success: true, user: users[0] });
-        else res.status(401).json({ success: false, message: 'Invalid credentials' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+
+        if (users.length === 0) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        const user = users[0];
+
+        if (user.password !== user_password) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        return res.json({ success: true, data: { user } });
+    } catch (error) { res.status(500).json({ success: false, error: error.message });}
+});
+
+app.post('/api/signup', async(req, res) => {
+    const { user_name, user_password, full_name, user_email, role } = req.body;
+    try {
+        const [existing] = await pool.query(
+            'SELECT * FROM users WHERE username = ? OR email = ?', [user_name, user_email]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'Username or email already exists' });
+        }
+
+        const [result] = await pool.query(
+            'INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)', [user_name, user_password, full_name, user_email, role || 'staff']
+        );
+        
+        res.json({ success: true, id: result.insertId });
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
 app.get('/api/users', async(req, res) => {
     try {
-        const [rows] = await pool.query('SELECT user_id, username, full_name, email, role, created_at FROM users');
+        const [rows] = await pool.query('SELECT * FROM users');
+
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
 app.get('/api/users/:id', async(req, res) => {
     try {
-        const [rows] = await pool.query('SELECT user_id, username, full_name, email, role, created_at FROM users WHERE user_id = ?', [req.params.id]);
+        const [rows] = await pool.query('SELECT * FROM users WHERE user_id = ?', [req.params.id]);
+        
         res.json({ success: true, data: rows[0] });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/users', async(req, res) => {
-    const { username, password, full_name, email, role } = req.body;
-    try {
-        const [result] = await pool.query(
-            'INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)', [username, password, full_name, email, role || 'staff']
-        );
-        res.json({ success: true, id: result.insertId });
-    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
-});
-
 app.put('/api/users/:id', async(req, res) => {
-    const { username, password, full_name, email, role } = req.body;
+    const { user_name, user_password, full_name, email, role } = req.body;
     try {
         await pool.query(
-            'UPDATE users SET username=?, password=?, full_name=?, email=?, role=? WHERE user_id=?', [username, password, full_name, email, role, req.params.id]
+            'UPDATE users SET username=?, password=?, full_name=?, email=?, role=? WHERE user_id=?', [user_name, user_password, full_name, email, role, req.params.id]
         );
         res.json({ success: true, message: 'User updated' });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }

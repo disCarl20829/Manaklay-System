@@ -9,7 +9,7 @@ function AuthLayout({ children, title }) {
                 <div className={styles.loginBox}>
 
                     <div className={styles.logoContainer}>
-                        <img src="../../../public/logo.jpg" alt="Logo" className={styles.logo} />
+                        <img src="/logo.jpg" alt="Logo" className={styles.logo} />
                     </div>
 
                     <div className={styles.loginHeader}>

@@ -1,0 +1,138 @@
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    background: linear-gradient(180deg, var(--secondary-800), var(--secondary-900));
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xl);
+}
+
+/* HEADER */
+.header {
+    padding: 4.5rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    box-shadow: var(--shadow-lg);
+}
+
+.logo img {
+    width: 225%;
+    height: 225%;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+}
+
+.header h3 {
+    font-size: 1.2rem;
+    margin: 0.15rem;
+}
+
+.header p {
+    font-size: 0.85rem;
+    color: var(--gray-400);
+}
+
+/* NAV */
+.nav {
+    padding: 1rem 0;
+    flex: 1;
+}
+
+.nav a {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 1.5rem;
+    color: var(--gray-300);
+    text-decoration: none;
+    transition: var(--transition-base);
+    font-size: 0.95rem;
+    gap: 1rem;
+    position: relative;
+}
+
+/* ICON */
+.nav a i {
+    font-size: 1.2rem;
+    color: var(--gray-400);
+    transition: var(--transition-base);
+}
+
+/* HOVER */
+.nav a:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+}
+
+.nav a:hover i {
+    color: var(--white);
+}
+
+/* ACTIVE */
+.active {
+    background: linear-gradient(90deg, var(--primary-600), transparent);
+    color: var(--white);
+    border-left: 4px solid var(--primary-400);
+}
+
+.active i {
+    color: var(--white);
+}
+
+/* FOOTER */
+.footer {
+    padding: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.9rem;
+}
+
+.footer p {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gray-300);
+}
+
+.footer i {
+    color: var(--primary-400);
+}
+
+.link {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 1.5rem;
+    color: var(--gray-300);
+    text-decoration: none;
+    transition: var(--transition-base);
+    font-size: 0.95rem;
+    gap: 1rem;
+}
+
+.link i {
+    font-size: 1.2rem;
+    color: var(--gray-400);
+    transition: var(--transition-base);
+}
+
+.link:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+}
+
+.link:hover i {
+    color: var(--white);
+}

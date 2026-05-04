@@ -19,7 +19,7 @@ function InputField({
 
     return (
         <div className={styles.group}>
-            <span className="styles.icon">
+            <span className={styles.icon}>
                 <i className={`bi bi-${icon}`}></i>
             </span>
 
@@ -35,7 +35,7 @@ function InputField({
 
             {isPassword && (
                 <span
-                    className={styles.toggle}
+                    className={styles.icon}
                     onClick={() => setShowPassword(!showPassword)}
                     style={{ cursor: 'pointer' }}
                 >
