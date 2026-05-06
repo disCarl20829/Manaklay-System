@@ -14,7 +14,7 @@ function dashboard() {
       <div className="mainContent">
         <header>
           <h1>
-            <i className="bi bi-speedometer2"></i>
+            <i className="bi bi-box"></i>
             Dashboard
           </h1>
 

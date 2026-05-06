@@ -65,9 +65,9 @@ function Sidebar() {
                 </NavLink>
             </nav>
 
-            <div>
-                <p>Logged in as:</p>
-                <strong>{JSON.parse(localStorage.getItem("user"))?.username || "Unknown User"}</strong>
+            <div className={styles.footer}>
+                <p>LOGGED IN AS</p>
+                <p className="username"><strong>{JSON.parse(localStorage.getItem("user"))?.username || "Unknown User"}</strong></p>
             </div>
         </aside>
     );

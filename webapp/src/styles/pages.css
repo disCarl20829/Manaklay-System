@@ -1,5 +1,6 @@
 .layout {
   display: flex;
+  min-height: 100vh;
 }
 
 .mainContent {
@@ -15,8 +16,9 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 18px 28px;
-  background: white;
-  border-radius: 14px;
+  border-style: solid;
+  border-color: var(--gray-200);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
 }
