@@ -1,11 +1,16 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:5173', // Adjust this to your frontend URL
+    origin: [
+        'http://localhost:5173',
+        'http://192.168.254.100:5173'
+    ]
 }));
 app.use(express.json());
 
@@ -26,11 +31,12 @@ const pool = mysql.createPool({
 // 1. AUTH & USERS ENDPOINTS
 // ==========================================
 
-app.post('/api/login', async(req, res) => {
+app.post('/api/login', async (req, res) => {
     const { user_input, user_password } = req.body;
+
     try {
-        const [users] = await pool.query(
-            'SELECT * FROM users WHERE (username = ? OR email = ?)', [user_input, user_input]
+        const [users] = await pool.query(`SELECT * FROM users WHERE (username = ? OR email = ?)`,
+            [user_input, user_input]
         );
 
         if (users.length === 0) {
@@ -39,60 +45,78 @@ app.post('/api/login', async(req, res) => {
 
         const user = users[0];
 
-        if (user.password !== user_password) {
+        const isMatch = await bcrypt.compare(user_password, user.password);
+
+        if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
-        return res.json({ success: true, data: { user } });
-    } catch (error) { res.status(500).json({ success: false, error: error.message });}
+        delete user.password;
+
+        const token = jwt.sign({ user_id: user.user_id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+        return res.json({ success: true, data: { user, token } });
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/signup', async(req, res) => {
+app.post('/api/signup', async (req, res) => {
     const { user_name, user_password, full_name, user_email, role } = req.body;
+
     try {
-        const [existing] = await pool.query(
-            'SELECT * FROM users WHERE username = ? OR email = ?', [user_name, user_email]
-        );
+        const [existing] = await pool.query('SELECT * FROM users WHERE username = ? OR email = ?', [user_name, user_email]);
 
         if (existing.length > 0) {
             return res.status(400).json({ success: false, message: 'Username or email already exists' });
         }
 
-        const [result] = await pool.query(
-            'INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)', [user_name, user_password, full_name, user_email, role || 'staff']
+        const hashedPassword = await bcrypt.hash(user_password, 10);
+
+        const [result] = await pool.query(`INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)`,
+            [user_name, hashedPassword, full_name, user_email, role || 'staff']
         );
-        
+
         res.json({ success: true, id: result.insertId });
-    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-app.get('/api/users', async(req, res) => {
+app.get('/api/users', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM users');
+        const [rows] = await pool.query('SELECT user_id, username, full_name, email, role FROM users');
 
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.get('/api/users/:id', async(req, res) => {
+app.get('/api/users/:id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM users WHERE user_id = ?', [req.params.id]);
-        
+
         res.json({ success: true, data: rows[0] });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/users/:id', async(req, res) => {
+app.put('/api/users/:id', async (req, res) => {
     const { user_name, user_password, full_name, email, role } = req.body;
+
     try {
+        let hashedPassword = null;
+
+        if (user_password) {
+            hashedPassword = await bcrypt.hash(user_password, 10);
+        }
+
         await pool.query(
-            'UPDATE users SET username=?, password=?, full_name=?, email=?, role=? WHERE user_id=?', [user_name, user_password, full_name, email, role, req.params.id]
+            'UPDATE users SET username=?, password=?, full_name=?, email=?, role=? WHERE user_id=?', [user_name, hashedPassword, full_name, email, role, req.params.id]
         );
+        o
         res.json({ success: true, message: 'User updated' });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/users/:id', async(req, res) => {
+app.delete('/api/users/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM users WHERE user_id = ?', [req.params.id]);
         res.json({ success: true, message: 'User deleted' });
@@ -103,14 +127,14 @@ app.delete('/api/users/:id', async(req, res) => {
 // 2. PRODUCT CATEGORIES ENDPOINTS
 // ==========================================
 
-app.get('/api/product-categories', async(req, res) => {
+app.get('/api/product-categories', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM product_categories');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/product-categories', async(req, res) => {
+app.post('/api/product-categories', async (req, res) => {
     const { category_name, description } = req.body;
     try {
         const [result] = await pool.query('INSERT INTO product_categories (category_name, description) VALUES (?, ?)', [category_name, description]);
@@ -118,7 +142,7 @@ app.post('/api/product-categories', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/product-categories/:id', async(req, res) => {
+app.put('/api/product-categories/:id', async (req, res) => {
     const { category_name, description } = req.body;
     try {
         await pool.query('UPDATE product_categories SET category_name=?, description=? WHERE category_id=?', [category_name, description, req.params.id]);
@@ -126,7 +150,7 @@ app.put('/api/product-categories/:id', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/product-categories/:id', async(req, res) => {
+app.delete('/api/product-categories/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM product_categories WHERE category_id = ?', [req.params.id]);
         res.json({ success: true, message: 'Category deleted' });
@@ -137,7 +161,7 @@ app.delete('/api/product-categories/:id', async(req, res) => {
 // 3. PRODUCTS ENDPOINTS
 // ==========================================
 
-app.get('/api/products', async(req, res) => {
+app.get('/api/products', async (req, res) => {
     try {
         const [rows] = await pool.query(`
             SELECT p.*, c.category_name 
@@ -148,14 +172,14 @@ app.get('/api/products', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.get('/api/products/:id', async(req, res) => {
+app.get('/api/products/:id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products WHERE product_id = ?', [req.params.id]);
         res.json({ success: true, data: rows[0] });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/products', async(req, res) => {
+app.post('/api/products', async (req, res) => {
     const { category_id, product_name, description, unit_price, cost_price, stock_quantity, reorder_level } = req.body;
     try {
         const [result] = await pool.query(
@@ -166,7 +190,7 @@ app.post('/api/products', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/products/:id', async(req, res) => {
+app.put('/api/products/:id', async (req, res) => {
     const { category_id, product_name, description, unit_price, cost_price, stock_quantity, reorder_level } = req.body;
     try {
         await pool.query(
@@ -177,7 +201,7 @@ app.put('/api/products/:id', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/products/:id', async(req, res) => {
+app.delete('/api/products/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM products WHERE product_id = ?', [req.params.id]);
         res.json({ success: true, message: 'Product deleted' });
@@ -188,14 +212,14 @@ app.delete('/api/products/:id', async(req, res) => {
 // 4. PRODUCT TRANSACTIONS (IN/OUT/ADJUST)
 // ==========================================
 
-app.get('/api/transactions', async(req, res) => {
+app.get('/api/transactions', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM product_transactions ORDER BY transaction_date DESC');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/transactions', async(req, res) => {
+app.post('/api/transactions', async (req, res) => {
     const { product_id, transaction_type, quantity, unit_price, notes, user_id } = req.body;
     try {
         const [result] = await pool.query(
@@ -209,14 +233,14 @@ app.post('/api/transactions', async(req, res) => {
 // 5. ORDERS & ORDER ITEMS
 // ==========================================
 
-app.get('/api/orders', async(req, res) => {
+app.get('/api/orders', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM orders ORDER BY order_date DESC');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.get('/api/orders/:id', async(req, res) => {
+app.get('/api/orders/:id', async (req, res) => {
     try {
         const [order] = await pool.query('SELECT * FROM orders WHERE order_id = ?', [req.params.id]);
         const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id]);
@@ -225,7 +249,7 @@ app.get('/api/orders/:id', async(req, res) => {
 });
 
 // The specialized POST route that handles Order AND Order Items together
-app.post('/api/orders', async(req, res) => {
+app.post('/api/orders', async (req, res) => {
     const { total_amount, paid_amount, payment_method, notes, user_id, items } = req.body;
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -252,7 +276,7 @@ app.post('/api/orders', async(req, res) => {
     }
 });
 
-app.delete('/api/orders/:id', async(req, res) => {
+app.delete('/api/orders/:id', async (req, res) => {
     try {
         // Order items are deleted automatically if ON DELETE CASCADE is set. 
         // If not, you must delete order_items first, then the order.
@@ -266,14 +290,14 @@ app.delete('/api/orders/:id', async(req, res) => {
 // 6. EXPENSES CATEGORIES
 // ==========================================
 
-app.get('/api/expenses-categories', async(req, res) => {
+app.get('/api/expenses-categories', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM expenses_categories');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/expenses-categories', async(req, res) => {
+app.post('/api/expenses-categories', async (req, res) => {
     const { category_name, description } = req.body;
     try {
         const [result] = await pool.query('INSERT INTO expenses_categories (category_name, description) VALUES (?, ?)', [category_name, description]);
@@ -281,7 +305,7 @@ app.post('/api/expenses-categories', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/expenses-categories/:id', async(req, res) => {
+app.put('/api/expenses-categories/:id', async (req, res) => {
     const { category_name, description } = req.body;
     try {
         await pool.query('UPDATE expenses_categories SET category_name=?, description=? WHERE category_id=?', [category_name, description, req.params.id]);
@@ -289,7 +313,7 @@ app.put('/api/expenses-categories/:id', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/expenses-categories/:id', async(req, res) => {
+app.delete('/api/expenses-categories/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM expenses_categories WHERE category_id = ?', [req.params.id]);
         res.json({ success: true, message: 'Expense category deleted' });
@@ -300,14 +324,14 @@ app.delete('/api/expenses-categories/:id', async(req, res) => {
 // 7. EXPENSES
 // ==========================================
 
-app.get('/api/expenses', async(req, res) => {
+app.get('/api/expenses', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/expenses', async(req, res) => {
+app.post('/api/expenses', async (req, res) => {
     const { category_id, expense_date, description, amount, reference, user_id, notes } = req.body;
     try {
         const [result] = await pool.query(
@@ -317,7 +341,7 @@ app.post('/api/expenses', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/expenses/:id', async(req, res) => {
+app.put('/api/expenses/:id', async (req, res) => {
     const { category_id, expense_date, description, amount, reference, user_id, notes } = req.body;
     try {
         await pool.query(
@@ -327,7 +351,7 @@ app.put('/api/expenses/:id', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/expenses/:id', async(req, res) => {
+app.delete('/api/expenses/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM expenses WHERE expense_id = ?', [req.params.id]);
         res.json({ success: true, message: 'Expense deleted' });
@@ -338,14 +362,14 @@ app.delete('/api/expenses/:id', async(req, res) => {
 // 8. REPORTS
 // ==========================================
 
-app.get('/api/reports', async(req, res) => {
+app.get('/api/reports', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM reports ORDER BY created_at DESC');
         res.json({ success: true, data: rows });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.post('/api/reports', async(req, res) => {
+app.post('/api/reports', async (req, res) => {
     const { report_name, file_path, start_date, end_date } = req.body;
     try {
         const [result] = await pool.query(
@@ -355,7 +379,7 @@ app.post('/api/reports', async(req, res) => {
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete('/api/reports/:id', async(req, res) => {
+app.delete('/api/reports/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM reports WHERE report_id = ?', [req.params.id]);
         res.json({ success: true, message: 'Report record deleted' });

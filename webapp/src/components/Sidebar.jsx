@@ -3,7 +3,14 @@ import { NavLink } from 'react-router-dom';
 
 import styles from "./Sidebar.module.css";
 
+import { logout } from "../../config/auth_service";
+
 function Sidebar() {
+    const handleLogout = () => {
+        logout();
+        window.location.href = "/";
+    }
+
     return (
         <aside className={styles.sidebar}>
             <div className={styles.header}>
@@ -41,7 +48,7 @@ function Sidebar() {
                 </NavLink>
                 <NavLink to="/expenses" className={({ isActive }) =>
                     `${styles.link} ${isActive ? styles.active : ''}`
-                    }>
+                }>
                     <i className="bi bi-currency-dollar"></i>
                     Expenses
                 </NavLink>
@@ -57,7 +64,7 @@ function Sidebar() {
                     <i className="bi bi-gear"></i>
                     Settings
                 </NavLink>
-                <NavLink to="/logout" className={({ isActive }) =>
+                <NavLink onClick={handleLogout} className={({ isActive }) =>
                     `${styles.link} ${isActive ? styles.active : ''}`
                 }>
                     <i className="bi bi-box-arrow-right"></i>

@@ -32,6 +32,7 @@ function SignIn() {
 
       if (res.data.success) {
         localStorage.setItem("user", JSON.stringify(res.data.data.user));
+        localStorage.setItem("token", res.data.data.token);
 
         navigate("/dashboard");
       } else {
