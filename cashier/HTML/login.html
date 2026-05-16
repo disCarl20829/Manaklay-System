@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Manaklay Login</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* --- LEFT SIDE: Branding --- */
+        
+        .left-panel {
+            flex: 6;
+            /* Takes up 60% of the screen */
+            background: linear-gradient(135deg, #131b7d 0%, #2948a3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* The dark blue circle behind the logo */
+        
+        .logo-container {
+            width: 400px;
+            height: 400px;
+            background-color: #042159;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            /* Optional: subtle border to match the mockup */
+            border: 1px solid #1a3170;
+        }
+        
+        .logo-container img {
+            /* Once you export the logo text/tree from Figma, use this */
+            max-width: 80%;
+            height: auto;
+        }
+        /* Placeholder text just so you see where the logo goes */
+        
+        .logo-placeholder {
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        /* --- RIGHT SIDE: Login Form --- */
+        
+        .right-panel {
+            flex: 4;
+            /* Takes up 40% of the screen */
+            background: linear-gradient(to right, #dcdcdc 0%, #ffffff 50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-card {
+            background-color: white;
+            width: 80%;
+            max-width: 380px;
+            padding: 50px 40px;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .login-card h1 {
+            font-size: 2.2rem;
+            color: black;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+        
+        .input-group {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 15px 20px;
+            background-color: #f3f3f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #333;
+            outline: none;
+        }
+        
+        .input-group input::placeholder {
+            color: #a0a0a0;
+        }
+        
+        .login-btn {
+            margin-top: 15px;
+            width: 80%;
+            /* Button is slightly narrower than inputs in your design */
+            background-color: #4f4f4f;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 25px;
+            /* Pill shape */
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .login-btn:active {
+            background-color: #333;
+            /* Slight darkening when tapped */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="left-panel">
+        <div class="logo-container">
+            <img src="../ASSETS/logo.png" alt="Manaktay Logo" style="max-width: 120%; height: auto;">
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="login-card">
+            <h1>LOGIN</h1>
+
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Username">
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="password" placeholder="Password">
+            </div>
+
+            <button class="login-btn" id="loginBtn">Login</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+
+            if (user === "" || pass === "") {
+                alert("Please enter both Username and Password.");
+                return;
+            }
+
+            // Optional: Change button text so the user knows it's loading
+            btn.innerText = "Checking...";
+            btn.disabled = true;
+
+            // Send the data to your PHP file
+            fetch('../PHP/login_action.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: user,
+                        password: pass
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // THIS IS THE CRUCIAL LINE! It saves the name.
+                        localStorage.setItem('cashierName', data.full_name || user);
+
+                        // Then redirect to the main screen
+                        window.location.href = "index.html";
+                    } else {
+                        alert(data.message);
+                        btn.innerText = "Login";
+                        btn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert("Network error. Could not reach the server.");
+                    btn.innerText = "Login";
+                    btn.disabled = false;
+                });
+        });
+    </script>
+</body>
+
+</html>
