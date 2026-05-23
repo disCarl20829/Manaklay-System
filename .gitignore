@@ -1,2 +1,3 @@
-node_modules
-webapp/node_modules
+manaklay_db.sql
+TODO.md
+.env
