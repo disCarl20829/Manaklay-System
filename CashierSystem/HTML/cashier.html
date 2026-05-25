@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Manaklay POS</title>
+    <style>
+         :root {
+            --bg-light: #f5f5f7;
+            --panel-bg: #ffffff;
+            --card-bg: #d1d1d6;
+            --dark-gray: #4b4b4b;
+            --text-main: #000000;
+            --border-color: #e5e5ea;
+            --blue-accent: #007AFF;
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-light);
+            overflow: hidden;
+        }
+        /* --- LEFT PANEL --- */
+        
+        .main-panel {
+            flex: 6.5;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 30px;
+            background-color: var(--bg-light);
+        }
+        
+        .top-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .btn-back {
+            display: none;
+            background-color: var(--dark-gray);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            margin-right: 15px;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+        
+        .search-container {
+            position: relative;
+            flex-grow: 1;
+        }
+        
+        .search-bar {
+            width: 100%;
+            padding: 15px 20px 15px 45px;
+            border-radius: 25px;
+            border: none;
+            background-color: var(--dark-gray);
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+        }
+        
+        .search-bar::placeholder {
+            color: #a0a0a0;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0a0a0;
+            font-size: 1.2rem;
+        }
+        
+        .dynamic-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            align-content: start;
+        }
+        
+        .category-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: opacity 0.1s;
+        }
+        
+        .category-card:active {
+            opacity: 0.7;
+        }
+        
+        .category-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .category-card .name {
+            font-size: 1.2rem;
+            text-transform: lowercase;
+        }
+        
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: opacity 0.1s;
+            position: relative;
+        }
+        
+        .product-card:active {
+            opacity: 0.7;
+        }
+        
+        .product-card img {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        
+        .product-card .details {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+        
+        .product-card .name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .product-card .price {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        
+        .product-card.out-of-stock {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        
+        .product-card.out-of-stock:active {
+            opacity: 0.4;
+        }
+        
+        .oos-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        
+        .bottom-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+        }
+        
+        .cashier-info {
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .cashier-info span {
+            display: block;
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn-action {
+            background-color: var(--dark-gray);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        /* --- RIGHT PANEL --- */
+        
+        .order-panel {
+            flex: 3.5;
+            background-color: var(--panel-bg);
+            border-left: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .order-panel::before {
+            content: "Manaklay";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.03);
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .order-header h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 20px;
+            z-index: 1;
+            position: relative;
+        }
+        
+        .order-table-headers {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dark-gray);
+            margin-bottom: 10px;
+            z-index: 1;
+            position: relative;
+        }
+        
+        .order-items-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            z-index: 1;
+            position: relative;
+        }
+        
+        .cart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        
+        .cart-acts {
+            display: flex;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .qty-input {
+            width: 45px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px;
+            background-color: var(--bg-light);
+            outline: none;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+        
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .qty-input:focus {
+            border-color: var(--blue-accent);
+            background-color: white;
+        }
+        
+        .order-total-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: 400;
+            margin-bottom: 20px;
+            z-index: 1;
+            position: relative;
+        }
+        
+        .btn-place-order {
+            width: 100%;
+            background-color: var(--dark-gray);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            z-index: 1;
+            position: relative;
+        }
+        /* Modals */
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .modal-box {
+            background: white;
+            padding: 40px 50px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-box h3 {
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .modal-btn {
+            padding: 12px 35px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 5px;
+            color: white;
+            font-size: 1.1rem;
+        }
+        
+        .btn-no {
+            background-color: var(--dark-gray);
+        }
+        
+        .btn-yes {
+            background-color: var(--blue-accent);
+        }
+        /* --- FULL SCREEN HISTORY VIEW --- */
+        
+        .history-view {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-light);
+            z-index: 10000;
+            /* Covers everything */
+            flex-direction: column;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        
+        .history-title {
+            font-size: 3rem;
+            font-weight: 400;
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+        
+        .history-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+        
+        .h-header-row {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 1fr 1fr;
+            background-color: #e5e5ea;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .h-header-row div:nth-child(2) {
+            text-align: left;
+        }
+        /* Left align Date */
+        
+        .h-row {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 1fr 1fr;
+            padding: 15px;
+            align-items: center;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        .h-row div:nth-child(2) {
+            text-align: left;
+        }
+        
+        .h-arrow {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        /* The expanded items box */
+        
+        .h-details {
+            display: none;
+            background: var(--bg-light);
+            padding: 20px 40px;
+            border-radius: 12px;
+            margin: 0 20px 20px 50px;
+            border: 4px solid #e5e5ea;
+        }
+        
+        .h-details.open {
+            display: block;
+        }
+        
+        .hd-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 5px 0;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        
+        .hd-row div:nth-child(1) {
+            text-align: left;
+        }
+        
+        .hd-line {
+            border-top: 3px dashed var(--dark-gray);
+            margin: 15px 0;
+        }
+        
+        .hd-total {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            font-weight: 600;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        .hd-total div:nth-child(1) {
+            text-align: left;
+        }
+        
+        .btn-history-back {
+            background-color: var(--dark-gray);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-panel">
+        <div class="top-bar">
+            <button id="backBtn" class="btn-back" onclick="loadCategories()">Back</button>
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-bar" placeholder="Search">
+            </div>
+        </div>
+
+        <div class="dynamic-grid" id="mainGrid"></div>
+
+        <div class="bottom-bar">
+            <div class="cashier-info" onclick="openLogoutModal()">
+                Cashier:
+                <span id="cashierName">Loading...</span>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-action" onclick="undo()">Undo</button>
+                <button class="btn-action" onclick="redo()">Redo</button>
+                <button class="btn-action" onclick="openNewOrderModal()">New</button>
+                <button class="btn-action" onclick="openHistoryView()">History</button> </div>
+        </div>
+    </div>
+
+    <div class="order-panel">
+        <div class="order-header">
+            <h2>ORDER:</h2>
+        </div>
+
+        <div class="order-table-headers">
+            <div>ITEM</div>
+            <div>PRC</div>
+            <div>QTY</div>
+            <div>ACTS</div>
+        </div>
+
+        <div class="order-items-list" id="orderList"></div>
+
+        <div class="order-total-section">
+            <span>TOTAL:</span>
+            <span id="cartTotal">₱0</span>
+        </div>
+
+        <button class="btn-place-order" onclick="openFinishOrderModal()">Place Order</button>
+    </div>
+
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box">
+            <h3 id="logoutMessage">Do you want to logout?</h3>
+            <button class="modal-btn btn-no" onclick="closeLogoutModal()">No</button>
+            <button class="modal-btn btn-yes" onclick="confirmLogout()">Yes</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="newOrderModal">
+        <div class="modal-box">
+            <h3 style="line-height: 1.4;">Cancel and Create<br>New Order?</h3>
+            <button class="modal-btn btn-no" onclick="closeNewOrderModal()">No</button>
+            <button class="modal-btn btn-yes" onclick="confirmNewOrder()">Yes</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="finishOrderModal">
+        <div class="modal-box">
+            <h3>Finish Order?</h3>
+            <button class="modal-btn btn-no" onclick="closeFinishOrderModal()">No</button>
+            <button class="modal-btn btn-yes" id="confirmOrderBtn" onclick="confirmFinishOrder()">Yes</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-box" style="padding-top: 30px;">
+            <div style="width: 80px; height: 80px; background-color: #34C759; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <h3 style="margin-bottom: 30px; font-weight: 600;">Order Placed Successfully</h3>
+            <button class="modal-btn btn-yes" style="width: 150px;" onclick="closeSuccessModal()">Okay</button>
+        </div>
+    </div>
+
+    <div class="history-view" id="historyView">
+        <div class="history-title">HISTORY</div>
+
+        <div class="history-container">
+            <div class="h-header-row">
+                <div></div>
+                <div>Date</div>
+                <div>Qty of Items</div>
+                <div>Total Price</div>
+                <div>Cashier</div>
+            </div>
+
+            <div id="historyList">
+            </div>
+        </div>
+
+        <button class="btn-history-back" onclick="closeHistoryView()">Back</button>
+    </div>
+
+    <script>
+        // --- APP STATE ---
+        let cart = [];
+        let history = [
+            []
+        ];
+        let historyIndex = 0;
+
+        // --- VIEWS ---
+        async function loadCategories() {
+            document.getElementById('backBtn').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            const grid = document.getElementById('mainGrid');
+            grid.innerHTML = '<p style="grid-column: span 3; text-align: center;">Loading Categories...</p>';
+
+            try {
+                const response = await fetch('../PHP/get_categories.php');
+                const result = await response.json();
+                if (result.success) {
+                    grid.innerHTML = '';
+                    const iconMap = {
+                        'candy': '🍬',
+                        'biscuit': '🍪',
+                        'junk food': '🍟',
+                        'meal': '🍗',
+                        'beverage': '🥤',
+                        'alcohol': '🍸',
+                        'hygiene': '🪥',
+                        'utensils': '🍴',
+                        'clothing': '👕'
+                    };
+                    result.data.forEach(cat => {
+                        const icon = iconMap[cat.category_name.toLowerCase()] || '🔵';
+                        grid.innerHTML += `
+                            <div class="category-card" onclick="loadProducts(${cat.category_id})">
+                                <div class="icon">${icon}</div>
+                                <div class="name">${cat.category_name}</div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadProducts(categoryId = null, searchQuery = null) {
+            document.getElementById('backBtn').style.display = 'block';
+            const grid = document.getElementById('mainGrid');
+            grid.innerHTML = '<p style="grid-column: span 3; text-align: center;">Loading Products...</p>';
+
+            let url = '../PHP/get_products.php?';
+            if (categoryId) url += `category_id=${categoryId}`;
+            if (searchQuery) url += `search=${searchQuery}`;
+
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    grid.innerHTML = '';
+                    if (result.data.length === 0) {
+                        grid.innerHTML = '<p style="grid-column: span 3; text-align: center;">No items found.</p>';
+                        return;
+                    }
+
+                    result.data.forEach(prod => {
+                        const imgSrc = `../ASSETS/PRODUCTS/${prod.image}`;
+                        const nameEscaped = prod.product_name.replace(/'/g, "\\'");
+
+                        const stock = parseInt(prod.stock_quantity) || 0;
+                        const isOOS = stock <= 0;
+
+                        const cardClass = isOOS ? "product-card out-of-stock" : "product-card";
+                        const clickAction = isOOS ? "" : `onclick="addToCart(${prod.product_id}, '${nameEscaped}', ${prod.unit_price}, ${stock})"`;
+                        const overlay = isOOS ? `<div class="oos-overlay">Out of Stock</div>` : "";
+
+                        grid.innerHTML += `
+                            <div class="${cardClass}" ${clickAction}>
+                                ${overlay}
+                                <img src="${imgSrc}" onerror="this.src='../ASSETS/logo.png'">
+                                <div class="details">
+                                    <div class="name">${prod.product_name}</div>
+                                    <div class="price">₱${Math.floor(prod.unit_price)}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length > 0) {
+                loadProducts(null, query);
+            } else {
+                loadCategories();
+            }
+        });
+
+        // --- CART & UNDO/REDO LOGIC ---
+        function addToCart(id, name, price, maxStock) {
+            const existing = cart.find(item => item.id === id);
+            if (existing) {
+                if (existing.qty < maxStock) {
+                    existing.qty++;
+                } else {
+                    alert(`Only ${maxStock} in stock!`);
+                    return;
+                }
+            } else {
+                cart.push({
+                    id,
+                    name,
+                    price,
+                    qty: 1,
+                    maxStock
+                });
+            }
+            saveState();
+        }
+
+        function setExactQty(id, newQty, maxStock) {
+            let qty = parseInt(newQty);
+            if (isNaN(qty) || qty <= 0) {
+                removeFromCart(id);
+                return;
+            }
+            if (qty > maxStock) {
+                alert(`Only ${maxStock} available in stock!`);
+                qty = maxStock;
+            }
+            const item = cart.find(i => i.id === id);
+            if (item) {
+                item.qty = qty;
+                saveState();
+            }
+        }
+
+        function updateQty(id, change, maxStock) {
+            const item = cart.find(i => i.id === id);
+            if (item) {
+                let newQty = item.qty + change;
+                if (newQty > maxStock) {
+                    alert(`Only ${maxStock} in stock!`);
+                    return;
+                }
+                item.qty = newQty;
+                if (item.qty <= 0) {
+                    cart = cart.filter(i => i.id !== id);
+                }
+                saveState();
+            }
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(i => i.id !== id);
+            saveState();
+        }
+
+        function saveState() {
+            history = history.slice(0, historyIndex + 1);
+            history.push(JSON.parse(JSON.stringify(cart)));
+            historyIndex++;
+            renderCart();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                cart = JSON.parse(JSON.stringify(history[historyIndex]));
+                renderCart();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                cart = JSON.parse(JSON.stringify(history[historyIndex]));
+                renderCart();
+            }
+        }
+
+        function clearCart() {
+            cart = [];
+            saveState();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('orderList');
+            list.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.qty;
+                list.innerHTML += `
+                    <div class="cart-row">
+                        <div style="font-weight: 500;">${item.name}</div>
+                        <div>₱${Math.floor(item.price)}</div>
+                        <div>
+                            <input type="number" class="qty-input" value="${item.qty}" 
+                                   onchange="setExactQty(${item.id}, this.value, ${item.maxStock})"
+                                   onclick="this.select()">
+                        </div>
+                        <div class="cart-acts">
+                            <span onclick="updateQty(${item.id}, -1, ${item.maxStock})">−</span>
+                            <span onclick="updateQty(${item.id}, 1, ${item.maxStock})">+</span>
+                            <span onclick="removeFromCart(${item.id})" style="font-size:1rem; margin-left:5px;">🗑️</span>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('cartTotal').innerText = `₱${total}`;
+        }
+
+        // --- AUTH & INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const loggedInUser = localStorage.getItem('cashierName');
+            if (loggedInUser) {
+                document.getElementById('cashierName').innerText = loggedInUser;
+                loadCategories();
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // --- MODALS & CHECKOUT LOGIC ---
+        function openLogoutModal() {
+            const name = localStorage.getItem('cashierName') || 'Cashier';
+            document.getElementById('logoutMessage').innerText = `Do you want to logout as ${name}?`;
+            document.getElementById('logoutModal').style.display = 'flex';
+        }
+
+        function closeLogoutModal() {
+            document.getElementById('logoutModal').style.display = 'none';
+        }
+
+        function confirmLogout() {
+            localStorage.removeItem('cashierName');
+            window.location.href = 'login.html';
+        }
+
+        function openNewOrderModal() {
+            if (cart.length > 0) {
+                document.getElementById('newOrderModal').style.display = 'flex';
+            }
+        }
+
+        function closeNewOrderModal() {
+            document.getElementById('newOrderModal').style.display = 'none';
+        }
+
+        function confirmNewOrder() {
+            clearCart();
+            closeNewOrderModal();
+        }
+
+        function openFinishOrderModal() {
+            if (cart.length > 0) {
+                document.getElementById('finishOrderModal').style.display = 'flex';
+            } else {
+                alert("Please add items to the cart first.");
+            }
+        }
+
+        function closeFinishOrderModal() {
+            document.getElementById('finishOrderModal').style.display = 'none';
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+        }
+
+        async function confirmFinishOrder() {
+            const btn = document.getElementById('confirmOrderBtn');
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            const cashierName = localStorage.getItem('cashierName');
+
+            try {
+                const response = await fetch('../PHP/save_order.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cart: cart,
+                        cashierName: cashierName
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    clearCart();
+                    closeFinishOrderModal();
+                    loadCategories();
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (error) {
+                console.error("Checkout Error:", error);
+                alert("Network error while placing order.");
+            } finally {
+                btn.innerText = "Yes";
+                btn.disabled = false;
+            }
+        }
+
+        // --- NEW: HISTORY LOGIC ---
+        async function openHistoryView() {
+            document.getElementById('historyView').style.display = 'flex';
+            const container = document.getElementById('historyList');
+            container.innerHTML = '<p style="text-align:center; padding: 20px;">Loading History...</p>';
+
+            try {
+                const response = await fetch('../PHP/get_history.php');
+                const result = await response.json();
+
+                if (result.success) {
+                    renderHistory(result.data);
+                } else {
+                    container.innerHTML = `<p style="text-align:center; color:red;">Error: ${result.message}</p>`;
+                }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:red;">Failed to connect to database.</p>';
+            }
+        }
+
+        function closeHistoryView() {
+            document.getElementById('historyView').style.display = 'none';
+        }
+
+        function renderHistory(data) {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 20px;">No transactions found.</p>';
+                return;
+            }
+
+            data.forEach((order, index) => {
+                // Format the Date & Time (e.g., 05/13/2026 14:30)
+                const dateObj = new Date(order.date);
+                const dateStr = dateObj.toLocaleString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Build the item details list
+                let detailsHTML = '';
+                order.items.forEach(item => {
+                    detailsHTML += `
+                        <div class="hd-row">
+                            <div>${item.name}</div>
+                            <div>₱${Math.floor(item.price)}</div>
+                            <div>x${item.qty}</div>
+                            <div>₱${Math.floor(item.subtotal)}</div>
+                        </div>
+                    `;
+                });
+
+                // Build the complete accordion row
+                container.innerHTML += `
+                    <div>
+                        <div class="h-row">
+                            <div class="h-arrow" onclick="toggleHistoryDetails(${index})" id="arrow-${index}">&gt;</div>
+                            <div>${dateStr}</div>
+                            <div>${order.total_qty}</div>
+                            <div>₱${Math.floor(order.total_price)}</div>
+                            <div>${order.cashier}</div>
+                        </div>
+                        <div class="h-details" id="details-${index}">
+                            ${detailsHTML}
+                            <div class="hd-line"></div>
+                            <div class="hd-total">
+                                <div>Total</div>
+                                <div></div> <div>x${order.total_qty}</div>
+                                <div>₱${Math.floor(order.total_price)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleHistoryDetails(index) {
+            const details = document.getElementById(`details-${index}`);
+            const arrow = document.getElementById(`arrow-${index}`);
+
+            if (details.classList.contains('open')) {
+                details.classList.remove('open');
+                arrow.innerHTML = '&gt;'; // Left-pointing arrow equivalent
+            } else {
+                details.classList.add('open');
+                arrow.innerHTML = 'v'; // Down-pointing arrow
+            }
+        }
+    </script>
+</body>
+
+</html>
