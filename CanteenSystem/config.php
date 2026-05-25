@@ -1,14 +1,22 @@
 <?php
 session_start();
 
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '123456');
-define('DB_NAME', 'manaklay_db');
+// Fetch environment variables dynamically
+$env_host = getenv('MYSQLHOST') ?: 'localhost';
+$env_user = getenv('MYSQLUSER') ?: 'root';
+$env_pass = getenv('MYSQLPASSWORD') ?: '123456';
+$env_name = getenv('MYSQLDATABASE') ?: 'manaklay_db';
+$env_port = getenv('MYSQLPORT') ?: '3306';
 
-// Create connection
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+// Database configuration constants
+define('DB_HOST', $env_host);
+define('DB_USER', $env_user);
+define('DB_PASS', $env_pass);
+define('DB_NAME', $env_name);
+define('DB_PORT', $env_port);
+
+// Create connection incorporating the port
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 
 // Check connection
 if ($conn->connect_error) {
@@ -18,58 +26,4 @@ if ($conn->connect_error) {
 // Set timezone
 date_default_timezone_set('Asia/Manila');
 
-// Function to check if user is logged in
-function isLoggedIn()
-{
-    return isset($_SESSION['user_id']);
-}
-
-// Function to redirect
-function redirect($url)
-{
-    header("Location: $url");
-    exit();
-}
-
-// Function to sanitize input
-function sanitize($input)
-{
-    global $conn;
-    return mysqli_real_escape_string($conn, htmlspecialchars(trim($input)));
-}
-
-// Function to format currency
-function formatCurrency($amount)
-{
-    return '₱' . number_format($amount, 2);
-}
-
-// Function to get status badge class
-function getStatusBadgeClass($status)
-{
-    $classes = [
-        'pending' => 'status-pending',
-        'in_progress' => 'status-progress',
-        'completed' => 'status-completed',
-        'delivered' => 'status-delivered',
-        'cancelled' => 'status-cancelled',
-        'paid' => 'status-completed',
-        'unpaid' => 'status-pending',
-        'partial' => 'status-progress'
-    ];
-
-    return isset($classes[$status]) ? $classes[$status] : 'status-pending';
-}
-
-// Email configuration
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'your-email@gmail.com');
-define('SMTP_PASS', 'your-app-password');
-
-function sendWelcomeEmail($email, $name, $username)
-{
-    error_log("Welcome email would be sent to: $email for user: $username");
-    return true;
-}
-?>
+// ... (Keep the rest of your original functions down here)

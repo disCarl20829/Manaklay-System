@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 .venv/
 venv/
 __pycache__/
 *.pyc
+=======
+manaklay_db.sql
+TODO.md
+.env
+>>>>>>> 09f413d8a819c48bd3c1ea74ac009bf4cea47f71
