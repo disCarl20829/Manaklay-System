@@ -62,7 +62,7 @@ if (isset($_POST['action'])) {
                 $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
 
                 if (in_array($ext, $allowed)) {
-                    $target_dir = "product_imgs/$product_id/";
+                    $target_dir = "./../product_imgs/$category_id/";
                     if (!file_exists($target_dir)) {
                         mkdir($target_dir, 0777, true);
                     }
@@ -96,12 +96,12 @@ if (isset($_POST['action'])) {
             $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
 
             if (in_array($ext, $allowed)) {
-                $target_dir = "product_imgs/$product_id/";
+                $target_dir = "./../product_imgs/$category_id/";
                 if (!file_exists($target_dir)) {
                     mkdir($target_dir, 0777, true);
                 }
                 $filename = "product." . $ext;
-                $target_file = $target_dir . $filename;
+                $target_file = $target_dir . "/" . $filename;
 
                 if (move_uploaded_file($_FILES['product_image']['tmp_name'], $target_file)) {
                     $image_update_sql = ", image='$target_file'";
@@ -156,7 +156,7 @@ if (isset($_POST['action'])) {
     }
 
     if ($_POST['action'] == 'get_categories') {
-        $result = $conn->query("SELECT * FROM product_categories ORDER BY category_name");
+        $result = $conn->query("SELECT * FROM product_categories ORDER BY category_id DESC");
         $categories = [];
         while ($row = $result->fetch_assoc()) {
             $categories[] = $row;
@@ -166,7 +166,7 @@ if (isset($_POST['action'])) {
     }
 }
 
-$categories = $conn->query("SELECT * FROM product_categories ORDER BY category_name");
+$categories = $conn->query("SELECT * FROM product_categories ORDER BY category_id DESC");
 ?>
 
 <!DOCTYPE html>

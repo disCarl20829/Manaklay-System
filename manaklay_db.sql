@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 26, 2026 at 08:08 AM
+-- Generation Time: May 27, 2026 at 09:00 AM
 -- Server version: 8.0.40
 -- PHP Version: 8.2.12
 
@@ -41,7 +41,8 @@ CREATE TABLE `accommodations` (
 --
 
 INSERT INTO `accommodations` (`id`, `type`, `number`, `price_per_day`, `status`, `notes`) VALUES
-(1, 'Room', '1', 150.00, 'Active', '');
+(1, 'Room', '1', 150.00, 'Active', ''),
+(2, 'Room', '123', 123.00, 'Open', '123');
 
 -- --------------------------------------------------------
 
@@ -73,7 +74,8 @@ CREATE TABLE `customer_logs` (
 --
 
 INSERT INTO `customer_logs` (`id`, `customer_name`, `pax`, `adults`, `seniors`, `children`, `customer_type`, `overnight`, `accommodation`, `check_in_time`, `check_out_time`, `contact_number`, `entrance_fee`, `accommodation_fee`, `payment_status`) VALUES
-(2, 'roy', 6, 2, 2, 2, 'Walk-in', 'No', 'Room 1', '2026-05-25 04:02:00', NULL, '123', 0.00, 150.00, 'Partial');
+(2, 'roy', 6, 2, 2, 2, 'Walk-in', 'No', 'Room 123', '2026-05-23 04:02:00', NULL, '123', 2160.00, 123.00, 'Partial'),
+(3, '123', 0, 0, 0, 0, 'Walk-in', 'No', 'Room 123', '2026-05-06 08:41:00', '2026-05-26 14:50:41', '123', 0.00, 123.00, 'Full');
 
 -- --------------------------------------------------------
 
@@ -124,42 +126,6 @@ INSERT INTO `expenses_categories` (`category_id`, `category_name`, `description`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `orders`
---
-
-CREATE TABLE `orders` (
-  `order_id` int NOT NULL,
-  `order_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `total_amount` decimal(10,2) DEFAULT '0.00',
-  `paid_amount` decimal(10,2) DEFAULT '0.00',
-  `payment_method` enum('cash','gcash') COLLATE utf8mb4_general_ci DEFAULT 'cash',
-  `notes` text COLLATE utf8mb4_general_ci,
-  `user_id` int DEFAULT NULL,
-  `order_status` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'pending',
-  `payment_status` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'unpaid',
-  `customer_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'walkin',
-  `due_date` date DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `order_items`
---
-
-CREATE TABLE `order_items` (
-  `order_item_id` int NOT NULL,
-  `order_id` int DEFAULT NULL,
-  `product_id` int DEFAULT NULL,
-  `quantity` int NOT NULL,
-  `unit_price` decimal(10,2) NOT NULL,
-  `subtotal` decimal(10,2) NOT NULL,
-  `specifications` text COLLATE utf8mb4_general_ci
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `products`
 --
 
@@ -175,6 +141,14 @@ CREATE TABLE `products` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT 'default.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `unit_price`, `cost_price`, `stock_quantity`, `reorder_level`, `created_at`, `image`) VALUES
+(23, 10, 'kharl', 'kharl', 250.00, 200.00, 0, 1, '2026-05-27 03:43:32', 'product_imgs/23/product.jpg'),
+(24, 9, 'test', '123', 12312.00, 123.00, 12, 10, '2026-05-27 06:42:44', './../product_imgs/9/product.png');
 
 -- --------------------------------------------------------
 
@@ -232,7 +206,10 @@ INSERT INTO `product_transactions` (`transaction_id`, `product_id`, `quantity`, 
 (4, NULL, 3, 12.00, NULL, '2026-05-16 02:26:29', 1),
 (5, NULL, 1, 12.00, NULL, '2026-05-16 02:26:29', 1),
 (6, NULL, 1, 12.00, NULL, '2026-05-16 02:35:00', 1),
-(7, NULL, 4, 12.00, NULL, '2026-05-16 02:35:00', 1);
+(7, NULL, 4, 12.00, NULL, '2026-05-16 02:35:00', 1),
+(8, 23, -13, 250.00, '', '2026-05-27 03:44:45', 5),
+(9, 23, -1, 250.00, '', '2026-05-27 03:44:53', 5),
+(10, 23, 1, 250.00, NULL, '2026-05-27 05:53:31', 5);
 
 -- --------------------------------------------------------
 
@@ -291,7 +268,7 @@ CREATE TABLE `settings` (
 INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('fee_adult', 50.00),
 ('fee_child', 30.00),
-('fee_senior', 40.00);
+('fee_senior', 1000.00);
 
 -- --------------------------------------------------------
 
@@ -348,21 +325,6 @@ ALTER TABLE `expenses_categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- Indexes for table `orders`
---
-ALTER TABLE `orders`
-  ADD PRIMARY KEY (`order_id`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `order_items`
---
-ALTER TABLE `order_items`
-  ADD PRIMARY KEY (`order_item_id`),
-  ADD KEY `order_id` (`order_id`),
-  ADD KEY `product_id` (`product_id`);
-
---
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
@@ -416,13 +378,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `accommodations`
 --
 ALTER TABLE `accommodations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `customer_logs`
 --
 ALTER TABLE `customer_logs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `expenses`
@@ -437,22 +399,10 @@ ALTER TABLE `expenses_categories`
   MODIFY `category_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `orders`
---
-ALTER TABLE `orders`
-  MODIFY `order_id` int NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `order_items`
---
-ALTER TABLE `order_items`
-  MODIFY `order_item_id` int NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `product_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `product_categories`
@@ -464,7 +414,7 @@ ALTER TABLE `product_categories`
 -- AUTO_INCREMENT for table `product_transactions`
 --
 ALTER TABLE `product_transactions`
-  MODIFY `transaction_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `transaction_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `reports`
@@ -494,19 +444,6 @@ ALTER TABLE `users`
 ALTER TABLE `expenses`
   ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `expenses_categories` (`category_id`),
   ADD CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
-
---
--- Constraints for table `orders`
---
-ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
-
---
--- Constraints for table `order_items`
---
-ALTER TABLE `order_items`
-  ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`),
-  ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
 
 --
 -- Constraints for table `products`

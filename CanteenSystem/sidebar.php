@@ -10,8 +10,7 @@
         <a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
         <a href="products.php"><i class="fas fa-box"></i> Products</a>
         <a href="inventory.php"><i class="fas fa-warehouse"></i> Inventory</a>
-        <a href="orders.php"><i class="fas fa-shopping-cart"></i> Orders</a>
-        <a href="payments.php"><i class="fas fa-money-bill"></i> Payments</a>
+        <a href="transactions.php"><i class="fas fa-shopping-cart"></i> Transactions</a>
         <a href="expenses.php"><i class="fas fa-chart-line"></i> Expenses</a>
         <a href="reports.php"><i class="fas fa-file-alt"></i> Reports</a>
         <a href="settings.php"><i class="fas fa-cog"></i> Settings</a>

@@ -15,26 +15,26 @@ $stats['total_products'] = $result->fetch_assoc()['count'];
 $result = $conn->query("SELECT COUNT(*) as count FROM products WHERE stock_quantity <= reorder_level");
 $stats['low_stock'] = $result->fetch_assoc()['count'];
 
-// Today's orders
-$result = $conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(order_date) = CURDATE()");
-$stats['today_orders'] = $result->fetch_assoc()['count'];
+// Today's transactions
+$result = $conn->query("SELECT COUNT(*) as count FROM product_transactions WHERE DATE(transaction_date) = CURDATE()");
+$stats['today_transactions'] = $result->fetch_assoc()['count'];
 
 // Today's sales
-$result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE DATE(order_date) = CURDATE()");
+$result = $conn->query("SELECT COALESCE(SUM(unit_price * quantity), 0) as total FROM product_transactions WHERE DATE(transaction_date) = CURDATE()");
 $stats['today_sales'] = $result->fetch_assoc()['total'];
-
-// Pending orders
-$result = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'pending'");
-$stats['pending_orders'] = $result->fetch_assoc()['count'];
 
 // Monthly sales
 $result = $conn->query("SELECT 
-    DATE_FORMAT(order_date, '%Y-%m') as month,
-    COUNT(*) as order_count,
-    COALESCE(SUM(total_amount), 0) as total_sales
-    FROM orders 
-    WHERE order_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+    DATE_FORMAT(transaction_date, '%Y-%m') as month,
+    COUNT(DISTINCT CONCAT(
+            DATE_FORMAT(transaction_date, '%Y-%m-%d %H:%i:%s'),
+            '_',
+            user_id
+        )) as order_count,
+    COALESCE(SUM(unit_price * quantity), 0) as total_sales
+    FROM product_transactions 
+    WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
     ORDER BY month DESC");
 $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -90,8 +90,8 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                         <i class="fas fa-shopping-cart"></i>
                     </div>
                     <div class="stat-details">
-                        <h3><?php echo $stats['today_orders']; ?></h3>
-                        <p>Today's Orders</p>
+                        <h3><?php echo $stats['today_transactions']; ?></h3>
+                        <p>Today's Transactions</p>
                     </div>
                 </div>
 
@@ -109,20 +109,20 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
             <div class="dashboard-grid">
                 <div class="dashboard-card">
                     <div class="card-header">
-                        <h3><i class="fas fa-clock"></i> Recent Orders</h3>
-                        <a href="orders.php" class="btn-link">View All <i class="fas fa-arrow-right"></i></a>
+                        <h3><i class="fas fa-clock"></i> Recent Transactions</h3>
+                        <a href="transactions.php" class="btn-link">View All <i class="fas fa-arrow-right"></i></a>
                     </div>
                     <div class="card-body">
                         <table class="table">
                             <thead>
                                 <tr>
                                     <th>Order #</th>
-                                    <th>Customer</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
+                                    <th>Handled By</th>
+                                    <th>Product</th>
+                                    <th>Subtotal</th>
                                 </tr>
                             </thead>
-                            <tbody id="recent-orders">
+                            <tbody id="recent-transactions">
                                 <tr>
                                     <td colspan="4" style="text-align: center;">Loading...</td>
                                 </tr>
@@ -173,24 +173,24 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
             document.querySelector('.sidebar').classList.toggle('open');
         }
 
-        // Load recent orders
+        // Load recent transactions
         $.ajax({
-            url: 'orders.php',
+            url: 'transactions.php',
             type: 'POST',
-            data: { action: 'get_recent_orders' },
+            data: { action: 'get_transactions' },
             dataType: 'json',
             success: function (response) {
                 if (response.success && response.data) {
                     let html = '';
-                    response.data.forEach(function (order) {
+                    response.data.forEach(function (trnsc) {
                         html += `<tr>
-                            <td>#${order.order_id}</td>
-                            <td>${order.customer_name || 'Walk-in'}</td>
-                            <td>₱${parseFloat(order.total_amount).toFixed(2)}</td>
-                            <td><span class="status-badge status-${order.order_status}">${order.order_status}</span></td>
+                            <td>#${trnsc.transaction_id}</td>
+                            <td>${trnsc.full_name || 'Worker'}</td>
+                            <td>${trnsc.product_name}</td>
+                            <td>₱${parseFloat(trnsc.subtotal).toFixed(2)}</td>
                         </tr>`;
                     });
-                    $('#recent-orders').html(html || '<tr><td colspan="4">No orders found</td></tr>');
+                    $('#recent-transactions').html(html || '<tr><td colspan="4">No transactions found</td></tr>');
                 }
             }
         });
@@ -220,8 +220,10 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
         const monthlyData = <?php echo json_encode($monthly_sales ?: []); ?>;
         if (monthlyData.length > 0) {
             const ctx = document.getElementById('salesChart').getContext('2d');
-            const months = monthlyData.reverse().map(d => d.month);
-            const sales = monthlyData.reverse().map(d => d.total_sales);
+            const reversedData = [...monthlyData].reverse();
+
+            const months = reversedData.map(d => d.month);
+            const sales = reversedData.map(d => d.total_sales);
 
             new Chart(ctx, {
                 type: 'line',
