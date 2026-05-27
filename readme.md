@@ -3,8 +3,6 @@
 
 A multisystem project to be used for a beach resort in handling services such as accounting and inventory, cashier system, customer logbook systems. This to ensure and enhance proper managing.
 
-
-
 ## Environment Variables and Requirements
 
 To run this project, you will need to add the following environment variables to your .env file
@@ -24,12 +22,22 @@ To run this project, you will need to add the following environment variables to
 
 `Python 3.14.5` for backend and workaround purposes
 
+## Key Features
+
+* Advanced web-based Point-of-Sale (POS) and inventory management platform tailored for small-scale retail and tindahan operations.
+* Comprehensive product lifecycle management with dynamic CRUD operations and integrated image asset handling.
+* Real-time inventory synchronization with automated stock quantity monitoring and reorder threshold detection.
+* Transaction processing and sales logging architecture with cashier-based activity tracking.
+* Centralized transaction history module with detailed sales record visualization and audit tracing.
+* Automated report generation and downloadable financial documentation for operational analysis and record keeping.
+* Secure session-based authentication and access control mechanism for protected administrative operations.
+* Built using a full-stack web technology ecosystem including PHP, MySQL, JavaScript, jQuery, AJAX, HTML5, CSS3, Font Awesome, and Chart.js.
+
 ## Tech Stack
 
 **Client:** HTML, CSS, Vanilla JavaScript
 
 **Server:** PHP, Python
-
 
 ## Authors
 
