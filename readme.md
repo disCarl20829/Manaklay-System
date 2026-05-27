@@ -15,13 +15,14 @@ To run this project, you will need to add the following environment variables to
 
 `phpdotenv` For compiling every variable the system Requirements
 
+
 ### Applications
 
 `Cloudflare` to run a simple and free server to be accessible remotely
 
 `Composer` to install dependencies for PHP
 
-
+`Python 3.14.5` for backend and workaround purposes
 
 ## Tech Stack
 
