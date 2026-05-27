@@ -38,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mr. Tarpz Printing Shop - Login</title>
+    <title>Accounting & Inventory System - Login</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -396,8 +397,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <div class="logo">MT</div>
-                <h1>Mr. Tarpz Printing Shop</h1>
+                <div class="logo"><img style="height: 100%; width: 100%; border-radius: 100%;" src="./../resources/logo.jpg" alt="Logo"></div>
+                <h1>Manaklay Beach & Park Resort</h1>
                 <p>Accounting & Inventory System</p>
             </div>
             

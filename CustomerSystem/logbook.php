@@ -54,7 +54,8 @@ foreach ($logs as $log) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manaklay Resort - Dashboard</title>
+    <title>Customer System - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         :root {
             --sidebar-bg: #0A192F;
@@ -736,31 +737,31 @@ foreach ($logs as $log) {
 
         // Add this or replace your existing edit function at the bottom of logbook.php
         function openEditModal(id, name, contact, type, adults, seniors, children, acc, overnight, entrance, acc_fee, payment, checkIn) {
-            document.getElementById('modal_title').innerText = 'Edit Customer Details';
-            document.getElementById('modal_action').value = 'edit';
-            document.getElementById('log_customer_id').value = id;
+            // Set the main customer ID hidden input
+            document.getElementById('edit_customer_id').value = id;
 
-            document.getElementById('log_customer_name').value = name;
-            document.getElementById('log_contact_number').value = contact;
-            document.getElementById('log_customer_type').value = type;
+            // Set text and selection values using the actual HTML IDs
+            document.getElementById('edit_check_in_time').value = checkIn;
+            document.getElementById('edit_customer_name').value = name;
+            document.getElementById('edit_customer_type').value = type;
+            document.getElementById('edit_overnight').value = overnight;
 
-            document.getElementById('log_adults').value = adults;
-            document.getElementById('log_seniors').value = seniors;
-            document.getElementById('log_children').value = children;
+            // Set numerical counts
+            document.getElementById('edit_adults').value = adults;
+            document.getElementById('edit_seniors').value = seniors;
+            document.getElementById('edit_children').value = children;
+            document.getElementById('edit_contact_number').value = contact;
 
-            document.getElementById('log_accommodation').value = acc;
-            document.getElementById('log_overnight').value = overnight;
+            // Set accommodation and its fee
+            document.getElementById('edit_accommodation_select').value = acc;
+            document.getElementById('edit_accommodation_fee').value = acc_fee;
+            document.getElementById('edit_payment_status').value = payment;
 
-            document.getElementById('log_entrance_fee').value = entrance;
-            document.getElementById('log_accommodation_fee').value = acc_fee;
-            document.getElementById('log_payment_status').value = payment;
-            document.getElementById('log_check_in_time').value = checkIn;
+            // Recalculate fees for the edit modal so total displays correctly on open
+            calculateEditFees();
 
-            // Trigger the calculators to update the readonly fields
-            calculatePax();
-            calculateLogBill();
-
-            openModal('customerModal');
+            // Open the correct modal container ID
+            openModal('editModal');
         }
 
         const fees = <?= $settingsJson ?>;

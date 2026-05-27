@@ -11,21 +11,30 @@ if (!file_exists($reports_dir)) {
 
 if (isset($_POST['action'])) {
     header('Content-Type: application/json');
-    
+
     if ($_POST['action'] == 'generate_report') {
         $range = sanitize($_POST['range']);
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "report_$timestamp.xlsx";
         $filepath = $reports_dir . $filename;
-        
+
         switch ($range) {
-            case 'Today': $filter = "CURDATE()"; break;
-            case '1 week': $filter = "DATE_SUB(NOW(), INTERVAL 1 WEEK)"; break;
-            case '1 month': $filter = "DATE_SUB(NOW(), INTERVAL 1 MONTH)"; break;
-            case '6 months': $filter = "DATE_SUB(NOW(), INTERVAL 6 MONTH)"; break;
-            default: $filter = "DATE_SUB(NOW(), INTERVAL 1 MONTH)";
+            case 'Today':
+                $filter = "CURDATE()";
+                break;
+            case '1 week':
+                $filter = "DATE_SUB(NOW(), INTERVAL 1 WEEK)";
+                break;
+            case '1 month':
+                $filter = "DATE_SUB(NOW(), INTERVAL 1 MONTH)";
+                break;
+            case '6 months':
+                $filter = "DATE_SUB(NOW(), INTERVAL 6 MONTH)";
+                break;
+            default:
+                $filter = "DATE_SUB(NOW(), INTERVAL 1 MONTH)";
         }
-        
+
         // Get expenses
         $exp_res = $conn->query("SELECT * FROM expenses WHERE expense_date >= $filter");
         $expenses = [];
@@ -34,7 +43,7 @@ if (isset($_POST['action'])) {
             $expenses[] = $row;
             $total_expenses += $row['amount'];
         }
-        
+
         // Get payments
         $pay_res = $conn->query("SELECT * FROM payments WHERE payment_date >= $filter");
         $payments = [];
@@ -43,7 +52,7 @@ if (isset($_POST['action'])) {
             $payments[] = $row;
             $total_payments += $row['amount'];
         }
-        
+
         // Simple CSV output since Python may not be available
         $csv_content = "EXPENSES REPORT\n";
         $csv_content .= "Date,Category,Description,Amount,Payment Method,Reference,Notes\n";
@@ -51,7 +60,7 @@ if (isset($_POST['action'])) {
             $csv_content .= "{$e['expense_date']},{$e['category']},{$e['description']},{$e['amount']},{$e['payment_method']},{$e['reference']},{$e['notes']}\n";
         }
         $csv_content .= "\nTOTAL EXPENSES:,$total_expenses\n\n";
-        
+
         $csv_content .= "PAYMENTS REPORT\n";
         $csv_content .= "Date,Order ID,Amount,Payment Method,Reference\n";
         foreach ($payments as $p) {
@@ -59,21 +68,21 @@ if (isset($_POST['action'])) {
         }
         $csv_content .= "\nTOTAL PAYMENTS:,$total_payments\n";
         $csv_content .= "\nNET:," . ($total_payments - $total_expenses) . "\n";
-        
+
         $csv_filename = "report_$timestamp.csv";
         $csv_filepath = $reports_dir . $csv_filename;
         file_put_contents($csv_filepath, $csv_content);
-        
+
         $relative_path = "reports/" . $csv_filename;
         $name = "Financial Report ($range)";
         $stmt = $conn->prepare("INSERT INTO reports (report_name, file_path, date_range) VALUES (?, ?, ?)");
         $stmt->bind_param("sss", $name, $relative_path, $range);
         $stmt->execute();
-        
+
         echo json_encode(['success' => true, 'file_path' => $relative_path]);
         exit;
     }
-    
+
     if ($_POST['action'] == 'get_reports') {
         $search = isset($_POST['search']) ? sanitize($_POST['search']) : '';
         $sql = "SELECT * FROM reports WHERE report_name LIKE '%$search%' OR created_at LIKE '%$search%' ORDER BY created_at DESC";
@@ -85,7 +94,7 @@ if (isset($_POST['action'])) {
         echo json_encode(['success' => true, 'data' => $reports]);
         exit;
     }
-    
+
     if ($_POST['action'] == 'delete_report') {
         $id = sanitize($_POST['report_id']);
         $file = sanitize($_POST['file_path']);
@@ -102,20 +111,23 @@ if (isset($_POST['action'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports - Mr. Tarpz Printing Shop</title>
+    <title>Accounting & Inventory System - Login</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
     <div class="dashboard-container">
         <?php include 'sidebar.php'; ?>
-        
+
         <div class="main-content">
             <button class="mobile-menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-            
+
             <div class="content-header">
                 <h1><i class="fas fa-file-invoice"></i> Reports Management</h1>
                 <div>
@@ -125,34 +137,47 @@ if (isset($_POST['action'])) {
                         <option value="1 month" selected>1 Month</option>
                         <option value="6 months">6 Months</option>
                     </select>
-                    <button class="btn btn-primary" onclick="generateReport()"><i class="fas fa-cog"></i> Generate Report</button>
+                    <button class="btn btn-primary" onclick="generateReport()"><i class="fas fa-cog"></i> Generate
+                        Report</button>
                 </div>
             </div>
-            
+
             <div class="filters-bar">
                 <div class="search-box">
                     <input type="text" id="searchReport" placeholder="Search reports...">
                     <i class="fas fa-search"></i>
                 </div>
-                <button class="btn btn-secondary" onclick="loadReports()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn btn-secondary" onclick="loadReports()"><i class="fas fa-sync-alt"></i>
+                    Refresh</button>
             </div>
-            
+
             <div class="table-container">
                 <table class="table">
-                    <thead><tr><th>Date Generated</th><th>Report Name</th><th>Range</th><th>Actions</th></tr></thead>
-                    <tbody id="reportsList"><tr><td colspan="4" class="text-center">Loading...</td></tr></tbody>
+                    <thead>
+                        <tr>
+                            <th>Date Generated</th>
+                            <th>Report Name</th>
+                            <th>Range</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsList">
+                        <tr>
+                            <td colspan="4" class="text-center">Loading...</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('open'); }
-        
+
         function loadReports() {
             const search = $('#searchReport').val();
-            $.post('reports.php', { action: 'get_reports', search: search }, function(response) {
+            $.post('reports.php', { action: 'get_reports', search: search }, function (response) {
                 if (response.success) {
                     let html = '';
                     response.data.forEach(report => {
@@ -169,18 +194,18 @@ if (isset($_POST['action'])) {
                 }
             }, 'json');
         }
-        
+
         function generateReport() {
             const range = $('#reportRange').val();
             const btn = $('.btn-primary');
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
-            
+
             $.ajax({
                 url: 'reports.php',
                 type: 'POST',
                 data: { action: 'generate_report', range: range },
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         alert('Report generated successfully!');
                         loadReports();
@@ -188,15 +213,15 @@ if (isset($_POST['action'])) {
                         alert('Error: ' + response.message);
                     }
                 },
-                complete: function() {
+                complete: function () {
                     btn.prop('disabled', false).html('<i class="fas fa-cog"></i> Generate Report');
                 }
             });
         }
-        
+
         function deleteReport(id, path) {
             if (confirm('Delete this report?')) {
-                $.post('reports.php', { action: 'delete_report', report_id: id, file_path: path }, function(response) {
+                $.post('reports.php', { action: 'delete_report', report_id: id, file_path: path }, function (response) {
                     if (response.success) {
                         loadReports();
                         alert('Report deleted');
@@ -204,11 +229,12 @@ if (isset($_POST['action'])) {
                 }, 'json');
             }
         }
-        
-        $(document).ready(function() {
+
+        $(document).ready(function () {
             loadReports();
-            $('#searchReport').on('keyup', function() { loadReports(); });
+            $('#searchReport').on('keyup', function () { loadReports(); });
         });
     </script>
 </body>
+
 </html>

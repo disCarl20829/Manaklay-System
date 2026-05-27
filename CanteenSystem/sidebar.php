@@ -1,9 +1,9 @@
 <div class="sidebar" style="overflow-x: hidden;">
     <div class="sidebar-header" style="width: 100%; text-align: center; padding: 15px; box-sizing: border-box; overflow: hidden;">
         <div class="sidebar-logo" style="width: 130px; height: 130px; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 50%;">
-            <img src="images/logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            <img src="./../resources/logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;">
         </div>
-        <h3 style="margin: 0; color: #fff; font-size: 1.1rem;">Canteen System</h3>
+        <h3 style="margin: 0; color: #fff; font-size: 1.1rem;">Accounting & Inventory System</h3>
     </div>
 
     <nav class="sidebar-nav">

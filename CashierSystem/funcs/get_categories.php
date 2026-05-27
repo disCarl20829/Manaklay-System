@@ -1,6 +1,7 @@
 <?php
 // get_categories.php
-require 'db.php'; // Use the connection file we made earlier
+require 'db.php';           // provides $pdo (PDO)
+require_once 'check_session.php'; // session validation
 
 header('Content-Type: application/json');
 

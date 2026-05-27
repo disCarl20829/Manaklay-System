@@ -23,7 +23,8 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <head>
     <meta charset="UTF-8">
-    <title>Manaklay - Accommodations</title>
+    <title>Customer System - Accommodations</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         :root {
             --sidebar-bg: #0A192F;
@@ -308,11 +309,19 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <body>
     <aside class="sidebar">
-        <div class="sidebar-brand">Manaklay</div>
+        <div class="sidebar-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
+            </svg>
+            Manaklay
+        </div>
         <nav>
-            <a href="logbook.php" >Logs</a>
+            <a href="logbook.php">Logs</a>
             <a href="payments.php">Payments</a>
-            <a href="accommodations.php" class="active">Accommodations</a>            
+            <a href="accommodations.php" class="active">Accommodations</a>
             <a href="reports.php">Reports</a>
             <a href="settings.php">Settings</a>
         </nav>
@@ -327,7 +336,8 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="logbook-container">
             <div class="toolbar">
                 <form class="search-form" method="GET">
-                    <input type="text" name="search" class="search-input" placeholder="Search rooms or cottages..." value="<?= htmlspecialchars($search) ?>">
+                    <input type="text" name="search" class="search-input" placeholder="Search rooms or cottages..."
+                        value="<?= htmlspecialchars($search) ?>">
                     <button type="submit" class="btn btn-primary">Search</button>
                     <?php if (!empty($search)): ?>
                         <a href="accommodations.php" class="btn btn-clear">Clear</a>
@@ -357,12 +367,15 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td><?= htmlspecialchars($row['notes']) ?></td>
                             <td style="display:flex; gap: 5px;">
 
-                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 12px;" onclick="openEditAccModal(<?= $row['id'] ?>, '<?= $row['type'] ?>', '<?= $row['number'] ?>', '<?= $row['price_per_day'] ?>', '<?= $row['status'] ?>', '<?= htmlspecialchars($row['notes']) ?>')">Edit</button>
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 12px;"
+                                    onclick="openEditAccModal(<?= $row['id'] ?>, '<?= $row['type'] ?>', '<?= $row['number'] ?>', '<?= $row['price_per_day'] ?>', '<?= $row['status'] ?>', '<?= htmlspecialchars($row['notes']) ?>')">Edit</button>
 
-                                <form method="POST" action="actions.php" style="margin:0;" onsubmit="return confirm('Are you sure you want to completely delete this accommodation?');">
+                                <form method="POST" action="actions.php" style="margin:0;"
+                                    onsubmit="return confirm('Are you sure you want to completely delete this accommodation?');">
                                     <input type="hidden" name="action" value="delete_acc">
                                     <input type="hidden" name="acc_id" value="<?= $row['id'] ?>">
-                                    <button type="submit" class="btn btn-danger" style="padding: 6px 10px; font-size: 12px;">Delete</button>
+                                    <button type="submit" class="btn btn-danger"
+                                        style="padding: 6px 10px; font-size: 12px;">Delete</button>
                                 </form>
 
                             </td>

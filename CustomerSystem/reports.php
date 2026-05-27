@@ -42,24 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_report'])) {
     if (count($logs) > 0) {
         $filename = "Manaklay_" . ucfirst($report_type) . "_Report_" . date('Ymd_His') . ".xlsx";
         $filepath = $reports_dir . '/' . $filename;
-        
+
         // 1. Create a temporary JSON file for Python to read
         $temp_json = $reports_dir . '/temp_data_' . time() . '.json';
         file_put_contents($temp_json, json_encode($logs));
-        
+
         // 2. Prepare dates for the Excel Title
         $display_start = date('M d, Y', strtotime($start_time));
         $display_end = date('M d, Y', strtotime($end_time));
 
         // 3. Execute the Python script
         // Change this to your exact Python path if 'python' doesn't work (see Step 2 below)
-        $python_cmd = "python"; 
+        $python_cmd = "python";
         $script_path = __DIR__ . "/generate_excel.py";
-        
+
         // Added 2>&1 to capture standard errors from Python
         $cmd = escapeshellcmd("$python_cmd \"$script_path\" \"$temp_json\" \"$filepath\" \"$report_type\" \"$display_start\" \"$display_end\"") . " 2>&1";
         $output = shell_exec($cmd);
-        
+
         // NEW DEBUGGING BLOCK: Check if file was actually created
         if (!file_exists($filepath)) {
             echo "<div style='padding:20px; background:#FEE2E2; border:1px solid #991B1B; color:#991B1B; font-family:sans-serif;'>";
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_report'])) {
         // 5. Save Record to Database
         $stmt = $pdo->prepare("INSERT INTO report_history (filename, report_type, start_date, end_date) VALUES (?, ?, ?, ?)");
         $stmt->execute([$filename, $report_type, date('Y-m-d', strtotime($start_time)), date('Y-m-d', strtotime($end_time))]);
-        
+
         header("Location: reports.php?success=1");
         exit;
     } else {
@@ -98,7 +98,8 @@ $reports_history = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manaklay Resort - Reports</title>
+    <title>Customer System - Reports</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         /* Import existing styles from previous pages */
         :root {
@@ -366,10 +367,12 @@ $reports_history = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <td><?= date('M d, Y h:i A', strtotime($report['generated_at'])) ?></td>
                                 <td><strong style="text-transform: capitalize;"><?= $report['report_type'] ?></strong></td>
                                 <td><?= date('M d, Y', strtotime($report['start_date'])) ?> to
-                                    <?= date('M d, Y', strtotime($report['end_date'])) ?></td>
+                                    <?= date('M d, Y', strtotime($report['end_date'])) ?>
+                                </td>
                                 <td style="color: var(--text-muted);"><?= $report['filename'] ?></td>
                                 <td>
-                                    <a href="reports/<?= $report['filename'] ?>" download class="btn btn-success">Download Excel</a>
+                                    <a href="reports/<?= $report['filename'] ?>" download class="btn btn-success">Download
+                                        Excel</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

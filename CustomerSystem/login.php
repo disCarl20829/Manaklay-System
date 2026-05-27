@@ -36,7 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Manaklay - Login</title>
+    <title>Customer System - Login</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         :root {
             --sidebar-bg: #0A192F;
@@ -131,7 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
     <div class="login-card">
-        <h2>Manaklay Login</h2>
+        <h2>Manaklay Beach & Park Resort</h2>
+        <h3>Customer Logbook System</h3>
 
         <?php if ($error): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>

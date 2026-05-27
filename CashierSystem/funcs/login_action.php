@@ -32,7 +32,7 @@ if (isset($data['username']) && isset($data['password'])) {
         echo json_encode([
             'success' => true, 
             'message' => 'Login successful',
-            'full_name' => $user['full_name']
+            'username' => $user['username']
         ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid username or password.']);

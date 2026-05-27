@@ -7,7 +7,7 @@ if (!isLoggedIn()) {
 // Handle AJAX requests
 if (isset($_POST['action'])) {
     header('Content-Type: application/json');
-    
+
     if ($_POST['action'] == 'add_expense') {
         try {
             $expense_date = $_POST['expense_date'] ?? date('Y-m-d');
@@ -18,59 +18,59 @@ if (isset($_POST['action'])) {
             $reference = $_POST['reference'] ?? '';
             $notes = $_POST['notes'] ?? '';
             $user_id = $_SESSION['user_id'];
-            
+
             if (empty($category)) {
                 echo json_encode(['success' => false, 'message' => 'Category is required']);
                 exit;
             }
-            
+
             if (empty($description)) {
                 echo json_encode(['success' => false, 'message' => 'Description is required']);
                 exit;
             }
-            
+
             if ($amount <= 0) {
                 echo json_encode(['success' => false, 'message' => 'Amount must be greater than 0']);
                 exit;
             }
-            
+
             $sql = "INSERT INTO expenses (expense_date, category, description, amount, payment_method, reference, notes, user_id) 
                     VALUES ('$expense_date', '$category', '$description', '$amount', '$payment_method', '$reference', '$notes', '$user_id')";
-            
+
             if ($conn->query($sql)) {
                 echo json_encode(['success' => true, 'message' => 'Expense added successfully']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
             }
-            
+
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
         }
         exit;
     }
-    
+
     if ($_POST['action'] == 'get_expenses') {
         $search = isset($_POST['search']) ? $conn->real_escape_string($_POST['search']) : '';
         $category = isset($_POST['category']) ? $conn->real_escape_string($_POST['category']) : '';
-        
+
         $sql = "SELECT e.*, u.full_name as user_name 
                 FROM expenses e 
                 LEFT JOIN users u ON e.user_id = u.user_id 
                 WHERE 1=1";
-        
+
         if (!empty($search)) {
             $sql .= " AND (e.description LIKE '%$search%' OR e.category LIKE '%$search%')";
         }
-        
+
         if (!empty($category)) {
             $sql .= " AND e.category = '$category'";
         }
-        
+
         $sql .= " ORDER BY e.expense_date DESC";
-        
+
         $result = $conn->query($sql);
         $expenses = [];
-        
+
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $expenses[] = $row;
@@ -81,12 +81,12 @@ if (isset($_POST['action'])) {
         }
         exit;
     }
-    
+
     if ($_POST['action'] == 'delete_expense') {
         $expense_id = intval($_POST['expense_id']);
-        
+
         $sql = "DELETE FROM expenses WHERE expense_id = $expense_id";
-        
+
         if ($conn->query($sql)) {
             echo json_encode(['success' => true, 'message' => 'Expense deleted']);
         } else {
@@ -100,10 +100,12 @@ if (isset($_POST['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expenses - Mr. Tarpz Printing Shop</title>
+    <title>Accounting & Inventory System - Expenses</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -117,89 +119,207 @@ if (isset($_POST['action'])) {
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
         }
-        .summary-item { text-align: center; }
-        .summary-item h3 { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
-        .summary-item .amount { font-size: 24px; font-weight: bold; }
-        .filters-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .search-box { flex: 1; position: relative; }
-        .search-box input { width: 100%; padding: 10px 40px 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; }
-        .search-box i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-        .filter-select { padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; }
-        .btn-icon { background: none; border: none; cursor: pointer; padding: 5px 8px; margin: 0 2px; border-radius: 5px; }
-        .btn-icon:hover { background: #f1f5f9; }
-        .btn-icon.delete:hover { background: #fee2e2; color: #dc2626; }
-        .modal { 
-            display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0,0,0,0.5); 
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-item h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .summary-item .amount {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .filters-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 8px;
+            margin: 0 2px;
+            border-radius: 5px;
+        }
+
+        .btn-icon:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-icon.delete:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
             overflow-y: auto;
         }
-        .modal-content { 
-            background: white; 
-            max-width: 550px; 
+
+        .modal-content {
+            background: white;
+            max-width: 550px;
             width: 90%;
-            margin: 30px auto; 
-            border-radius: 15px; 
+            margin: 30px auto;
+            border-radius: 15px;
             overflow: hidden;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
         }
-        .modal-header { 
-            padding: 15px 20px; 
-            background: #1e293b; 
-            color: white; 
-            display: flex; 
+
+        .modal-header {
+            padding: 15px 20px;
+            background: #1e293b;
+            color: white;
+            display: flex;
             justify-content: space-between;
             flex-shrink: 0;
         }
-        .modal-body { 
-            padding: 20px; 
+
+        .modal-body {
+            padding: 20px;
             overflow-y: auto;
             flex: 1;
         }
-        .modal-footer { 
-            padding: 15px 20px; 
-            background: #f8fafc; 
-            display: flex; 
-            justify-content: flex-end; 
+
+        .modal-footer {
+            padding: 15px 20px;
+            background: #f8fafc;
+            display: flex;
+            justify-content: flex-end;
             gap: 10px;
             flex-shrink: 0;
         }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
-        .form-group input, .form-group select, .form-group textarea { 
-            width: 100%; 
-            padding: 10px; 
-            border: 2px solid #e2e8f0; 
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-size: 14px;
         }
+
         .form-group textarea {
             resize: vertical;
             min-height: 60px;
         }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-secondary { background: #e2e8f0; color: #475569; }
-        .close { font-size: 24px; cursor: pointer; }
-        .text-center { text-align: center; }
-        .table-container { overflow-x: auto; }
-        .table { width: 100%; border-collapse: collapse; }
-        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        .table th { background: #f8fafc; font-weight: 600; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .close {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
     </style>
 </head>
+
 <body>
     <div class="dashboard-container">
         <?php include 'sidebar.php'; ?>
-        
+
         <div class="main-content" style="padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h1><i class="fas fa-chart-line"></i> Expenses Management</h1>
@@ -207,17 +327,29 @@ if (isset($_POST['action'])) {
                     <i class="fas fa-plus"></i> Add Expense
                 </button>
             </div>
-            
+
             <div class="expense-summary">
-                <div class="summary-item"><h3>Today</h3><div class="amount" id="todayTotal">₱0.00</div></div>
-                <div class="summary-item"><h3>This Week</h3><div class="amount" id="weekTotal">₱0.00</div></div>
-                <div class="summary-item"><h3>This Month</h3><div class="amount" id="monthTotal">₱0.00</div></div>
-                <div class="summary-item"><h3>Total</h3><div class="amount" id="grandTotal">₱0.00</div></div>
+                <div class="summary-item">
+                    <h3>Today</h3>
+                    <div class="amount" id="todayTotal">₱0.00</div>
+                </div>
+                <div class="summary-item">
+                    <h3>This Week</h3>
+                    <div class="amount" id="weekTotal">₱0.00</div>
+                </div>
+                <div class="summary-item">
+                    <h3>This Month</h3>
+                    <div class="amount" id="monthTotal">₱0.00</div>
+                </div>
+                <div class="summary-item">
+                    <h3>Total</h3>
+                    <div class="amount" id="grandTotal">₱0.00</div>
+                </div>
             </div>
-            
+
             <div class="filters-bar">
                 <div class="search-box">
-                    <input type="text" id="searchExpense" placeholder="Search expenses...">
+                    <input type="text" id="searchPayment" placeholder="Search expenses...">
                     <i class="fas fa-search"></i>
                 </div>
                 <select id="filterCategory" class="filter-select">
@@ -254,13 +386,15 @@ if (isset($_POST['action'])) {
                         </tr>
                     </thead>
                     <tbody id="expensesList">
-                        <tr><td colspan="9" class="text-center">Loading expenses...</td></tr>
+                        <tr>
+                            <td colspan="9" class="text-center">Loading expenses...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    
+
     <!-- Add Expense Modal -->
     <div id="expenseModal" class="modal">
         <div class="modal-content">
@@ -334,22 +468,22 @@ if (isset($_POST['action'])) {
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             loadExpenses();
-            
-            $('#searchExpense').on('keyup', function() {
+
+            $('#searchExpense').on('keyup', function () {
                 loadExpenses();
             });
-            
-            $('#filterCategory').on('change', function() {
+
+            $('#filterCategory').on('change', function () {
                 loadExpenses();
             });
         });
-        
+
         function loadExpenses() {
             const search = $('#searchExpense').val();
             const category = $('#filterCategory').val();
-            
+
             $.ajax({
                 url: 'expenses.php',
                 type: 'POST',
@@ -359,7 +493,7 @@ if (isset($_POST['action'])) {
                     category: category
                 },
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         displayExpenses(response.data);
                         updateSummary(response.data);
@@ -367,18 +501,18 @@ if (isset($_POST['action'])) {
                         $('#expensesList').html('<tr><td colspan="9" class="text-center">Error: ' + response.message + '</td></tr>');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.log('AJAX Error:', xhr.responseText);
                     $('#expensesList').html('<tr><td colspan="9" class="text-center">Error loading expenses. Check console.</td></tr>');
                 }
             });
         }
-        
+
         function displayExpenses(expenses) {
             let html = '';
-            
+
             if (expenses && expenses.length > 0) {
-                expenses.forEach(function(expense) {
+                expenses.forEach(function (expense) {
                     html += `
                         <tr>
                             <td>${expense.expense_date}</td>
@@ -400,10 +534,10 @@ if (isset($_POST['action'])) {
             } else {
                 html = '<tr><td colspan="9" class="text-center">No expenses found</td></tr>';
             }
-            
+
             $('#expensesList').html(html);
         }
-        
+
         function updateSummary(expenses) {
             const today = new Date().toISOString().split('T')[0];
             const weekAgo = new Date();
@@ -412,36 +546,36 @@ if (isset($_POST['action'])) {
             const monthAgo = new Date();
             monthAgo.setMonth(monthAgo.getMonth() - 1);
             const monthAgoStr = monthAgo.toISOString().split('T')[0];
-            
+
             let todayTotal = 0;
             let weekTotal = 0;
             let monthTotal = 0;
             let grandTotal = 0;
-            
-            expenses.forEach(function(expense) {
+
+            expenses.forEach(function (expense) {
                 const amount = parseFloat(expense.amount);
                 const date = expense.expense_date;
-                
+
                 grandTotal += amount;
-                
+
                 if (date === today) todayTotal += amount;
                 if (date >= weekAgoStr) weekTotal += amount;
                 if (date >= monthAgoStr) monthTotal += amount;
             });
-            
+
             $('#todayTotal').text('₱' + todayTotal.toFixed(2));
             $('#weekTotal').text('₱' + weekTotal.toFixed(2));
             $('#monthTotal').text('₱' + monthTotal.toFixed(2));
             $('#grandTotal').text('₱' + grandTotal.toFixed(2));
         }
-        
+
         function showAddExpenseModal() {
             $('#expenseForm')[0].reset();
             $('#expense_date').val(new Date().toISOString().split('T')[0]);
             $('#expenseModal').show();
             $('body').css('overflow', 'hidden');
         }
-        
+
         function saveExpense() {
             const formData = {
                 action: 'add_expense',
@@ -453,21 +587,21 @@ if (isset($_POST['action'])) {
                 reference: $('#reference').val(),
                 notes: $('#notes').val()
             };
-            
+
             if (!formData.category || !formData.description || !formData.amount) {
                 alert('Please fill in all required fields');
                 return;
             }
-            
+
             const btn = $('#expenseModal .btn-primary');
             btn.prop('disabled', true).text('Saving...');
-            
+
             $.ajax({
                 url: 'expenses.php',
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         alert('Expense saved successfully!');
                         closeModal();
@@ -476,16 +610,16 @@ if (isset($_POST['action'])) {
                         alert('Error: ' + response.message);
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     alert('Error saving expense. Check console for details.');
                     console.log('Response:', xhr.responseText);
                 },
-                complete: function() {
+                complete: function () {
                     btn.prop('disabled', false).text('Save Expense');
                 }
             });
         }
-        
+
         function deleteExpense(id) {
             if (confirm('Are you sure you want to delete this expense?')) {
                 $.ajax({
@@ -496,7 +630,7 @@ if (isset($_POST['action'])) {
                         expense_id: id
                     },
                     dataType: 'json',
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             alert('Expense deleted');
                             loadExpenses();
@@ -507,33 +641,34 @@ if (isset($_POST['action'])) {
                 });
             }
         }
-        
+
         function closeModal() {
             $('#expenseModal').hide();
             $('body').css('overflow', 'auto');
         }
-        
+
         function escapeHtml(text) {
             if (!text) return '';
-            return String(text).replace(/[&<>]/g, function(m) {
+            return String(text).replace(/[&<>]/g, function (m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
                 return m;
             });
         }
-        
-        window.onclick = function(event) {
+
+        window.onclick = function (event) {
             if ($(event.target).hasClass('modal')) {
                 closeModal();
             }
         }
-        
-        $(document).keydown(function(e) {
+
+        $(document).keydown(function (e) {
             if (e.key === 'Escape') {
                 closeModal();
             }
         });
     </script>
 </body>
+
 </html>

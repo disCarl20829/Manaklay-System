@@ -45,7 +45,8 @@ foreach ($payments as $pay) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manaklay Resort - Payments</title>
+    <title>Customer System - Payments</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         :root {
             --sidebar-bg: #0A192F;
@@ -364,9 +365,9 @@ foreach ($payments as $pay) {
             Manaklay
         </div>
         <nav>
-            <a href="logbook.php" >Logs</a>
+            <a href="logbook.php">Logs</a>
             <a href="payments.php" class="active">Payments</a>
-            <a href="accommodations.php">Accommodations</a>            
+            <a href="accommodations.php">Accommodations</a>
             <a href="reports.php">Reports</a>
             <a href="settings.php">Settings</a>
         </nav>

@@ -41,17 +41,20 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Mr. Tarpz Printing Shop</title>
+    <title>Accounting & Inventory System - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
     <div class="dashboard-container">
         <?php include 'sidebar.php'; ?>
-        
+
         <div class="main-content">
             <div class="content-header">
                 <h1>Dashboard</h1>
@@ -60,7 +63,7 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
             <button class="mobile-menu-toggle" onclick="toggleSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon blue">
@@ -71,7 +74,7 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                         <p>Total Products</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon yellow">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -81,7 +84,7 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                         <p>Low Stock Items</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon green">
                         <i class="fas fa-shopping-cart"></i>
@@ -91,7 +94,7 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                         <p>Today's Orders</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon purple">
                         <i class="fas fa-money-bill-wave"></i>
@@ -102,7 +105,7 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                     </div>
                 </div>
             </div>
-            
+
             <div class="dashboard-grid">
                 <div class="dashboard-card">
                     <div class="card-header">
@@ -120,12 +123,14 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                                 </tr>
                             </thead>
                             <tbody id="recent-orders">
-                                <tr><td colspan="4" style="text-align: center;">Loading...</td></tr>
+                                <tr>
+                                    <td colspan="4" style="text-align: center;">Loading...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-card">
                     <div class="card-header">
                         <h3><i class="fas fa-exclamation-circle"></i> Low Stock Alert</h3>
@@ -141,13 +146,15 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                                 </tr>
                             </thead>
                             <tbody id="low-stock-items">
-                                <tr><td colspan="3" style="text-align: center;">Loading...</td></tr>
+                                <tr>
+                                    <td colspan="3" style="text-align: center;">Loading...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            
+
             <div class="dashboard-card">
                 <div class="card-header">
                     <h3><i class="fas fa-chart-line"></i> Monthly Sales (Last 6 Months)</h3>
@@ -158,24 +165,24 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
             </div>
         </div>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('open');
         }
-        
+
         // Load recent orders
         $.ajax({
             url: 'orders.php',
             type: 'POST',
             data: { action: 'get_recent_orders' },
             dataType: 'json',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     let html = '';
-                    response.data.forEach(function(order) {
+                    response.data.forEach(function (order) {
                         html += `<tr>
                             <td>#${order.order_id}</td>
                             <td>${order.customer_name || 'Walk-in'}</td>
@@ -187,17 +194,17 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                 }
             }
         });
-        
+
         // Load low stock items
         $.ajax({
             url: 'inventory.php',
             type: 'POST',
             data: { action: 'get_low_stock' },
             dataType: 'json',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     let html = '';
-                    response.data.forEach(function(product) {
+                    response.data.forEach(function (product) {
                         html += `<tr>
                             <td>${product.product_name}</td>
                             <td>${product.stock_quantity}</td>
@@ -208,14 +215,14 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
                 }
             }
         });
-        
+
         // Chart
         const monthlyData = <?php echo json_encode($monthly_sales ?: []); ?>;
         if (monthlyData.length > 0) {
             const ctx = document.getElementById('salesChart').getContext('2d');
             const months = monthlyData.reverse().map(d => d.month);
             const sales = monthlyData.reverse().map(d => d.total_sales);
-            
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -232,4 +239,5 @@ $monthly_sales = $result->fetch_all(MYSQLI_ASSOC);
         }
     </script>
 </body>
+
 </html>

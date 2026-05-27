@@ -15,7 +15,8 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 <head>
     <meta charset="UTF-8">
-    <title>Manaklay - Settings</title>
+    <title>Customer System - Settings</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         :root {
             --sidebar-bg: #0A192F;
@@ -176,11 +177,19 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 <body>
     <aside class="sidebar">
-        <div class="sidebar-brand">Manaklay</div>
+        <div class="sidebar-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
+            </svg>
+            Manaklay
+        </div>
         <nav>
-            <a href="logbook.php" >Logs</a>
+            <a href="logbook.php">Logs</a>
             <a href="payments.php">Payments</a>
-            <a href="accommodations.php">Accommodations</a>            
+            <a href="accommodations.php">Accommodations</a>
             <a href="reports.php">Reports</a>
             <a href="settings.php" class="active">Settings</a>
         </nav>
@@ -194,7 +203,8 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         <div class="logbook-container" style="max-width: 500px;">
             <?php if (isset($_GET['success'])): ?>
-                <div style="background: #DEF7EC; color: #03543F; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500;">
+                <div
+                    style="background: #DEF7EC; color: #03543F; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500;">
                     ✓ Settings updated successfully!
                 </div>
             <?php endif; ?>
@@ -206,15 +216,18 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
                 <div class="form-group">
                     <label>Adult Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_adult" value="<?= htmlspecialchars($settings['fee_adult']) ?>" required>
+                    <input type="number" step="0.01" name="fee_adult"
+                        value="<?= htmlspecialchars($settings['fee_adult']) ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Senior/PWD Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_senior" value="<?= htmlspecialchars($settings['fee_senior']) ?>" required>
+                    <input type="number" step="0.01" name="fee_senior"
+                        value="<?= htmlspecialchars($settings['fee_senior']) ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Child Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_child" value="<?= htmlspecialchars($settings['fee_child']) ?>" required>
+                    <input type="number" step="0.01" name="fee_child"
+                        value="<?= htmlspecialchars($settings['fee_child']) ?>" required>
                 </div>
 
                 <div style="margin-top: 30px; text-align: right;">

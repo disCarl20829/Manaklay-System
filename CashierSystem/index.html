@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Manaklay Login</title>
+    <title>Cashier System - Login</title>
+    <link rel="icon" type="image/x-icon" href="./../resources/logo.jpg">
     <style>
         * {
             box-sizing: border-box;
@@ -134,7 +135,7 @@
 
     <div class="left-panel">
         <div class="logo-container">
-            <img src="../ASSETS/logo.png" alt="Manaktay Logo" style="max-width: 120%; height: auto;">
+            <img src="./../resources/logo.jpg" alt="Manaktay Logo" style="max-width: 120%; height: auto;">
         </div>
     </div>
 
@@ -170,7 +171,7 @@
             btn.disabled = true;
 
             // Send the data to your PHP file
-            fetch('../PHP/login_action.php', {
+            fetch('funcs/login_action.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -183,10 +184,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // THIS IS THE CRUCIAL LINE! It saves the name.
-                        localStorage.setItem('cashierName', data.full_name || user);
-
-                        // Then redirect to the main screen
                         window.location.href = "cashier.html";
                     } else {
                         alert(data.message);
