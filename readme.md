@@ -16,7 +16,7 @@ To run this project, you will need to add the following environment variables to
 
 ### Applications
 
-`Cloudflare` to run a simple and free server to be accessible remotely
+`Cloudflared` to run a simple and free server to be accessible remotely
 
 `Composer` to install dependencies for PHP
 
