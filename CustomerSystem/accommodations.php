@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 require 'db.php';
@@ -336,7 +336,7 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="logbook-container">
             <div class="toolbar">
                 <form class="search-form" method="GET">
-                    <input type="text" name="search" class="search-input" placeholder="Search rooms or cottages..."
+                    <input type="text" name="search" class="search-input" placeholder="Search accomodations..."
                         value="<?= htmlspecialchars($search) ?>">
                     <button type="submit" class="btn btn-primary">Search</button>
                     <?php if (!empty($search)): ?>
@@ -397,6 +397,10 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <select name="type">
                             <option value="Room">Room</option>
                             <option value="Cottage">Cottage</option>
+                            <option value="Function Hall">Function Hall</option>
+                            <option value="Dormitory">Dormitory</option>
+                            <option value="Conference Room">Conference Room</option>
+                            <option value="Others">Others</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -440,6 +444,10 @@ $accommodations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <select name="type" id="edit_type">
                             <option value="Room">Room</option>
                             <option value="Cottage">Cottage</option>
+                            <option value="Function Hall">Function Hall</option>
+                            <option value="Dormitory">Dormitory</option>
+                            <option value="Conference Room">Conference Room</option>
+                            <option value="Others">Others</option>
                         </select>
                     </div>
                     <div class="form-group">

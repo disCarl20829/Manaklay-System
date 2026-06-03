@@ -2,7 +2,7 @@
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
@@ -417,6 +417,7 @@ foreach ($payments as $pay) {
                         <th>Entrance Fee</th>
                         <th>Accommodation Fee</th>
                         <th>Total Cost</th>
+                        <th>Payment Method</th>
                         <th>Payment Status</th>
                         <th>Actions</th>
                     </tr>
@@ -433,6 +434,7 @@ foreach ($payments as $pay) {
                                 <td>₱<?= number_format($row['accommodation_fee'], 2) ?></td>
                                 <td style="font-weight: 600; color: var(--primary-blue);">
                                     ₱<?= number_format($row['total_amount'], 2) ?></td>
+                                <td><?=htmlspecialchars($row['payment_method'])?></td>
                                 <td>
                                     <?php if ($row['payment_status'] === 'Full'): ?>
                                         <span class="status-badge status-full">Full Payment</span>

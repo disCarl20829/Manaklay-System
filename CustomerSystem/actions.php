@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
@@ -19,12 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $accommodation = $_POST['accommodation'];
         $contact = $_POST['contact_number'];
         $payment = $_POST['payment_status'] ?? 'Unpaid';
+        $payment_method = $_POST['payment_method'] ?? 'Cash';
         $check_in = $_POST['check_in_time'] ?? date('Y-m-d H:i:s');
-        
+
         // Financials
         $entrance_fee = floatval($_POST['entrance_fee'] ?? 0);
         $acc_fee = floatval($_POST['accommodation_fee'] ?? 0);
-        // Removed PHP $total_amount calculation since MySQL handles it
 
         // Pax Data
         $adults = intval($_POST['adults'] ?? 0);
@@ -33,23 +33,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $pax = $adults + $seniors + $children;
 
         if ($action === 'add') {
-            // Removed total_amount from INSERT statement
-            $stmt = $pdo->prepare("INSERT INTO customer_logs (customer_name, pax, adults, seniors, children, customer_type, overnight, accommodation, contact_number, entrance_fee, accommodation_fee, payment_status, check_in_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name, $pax, $adults, $seniors, $children, $type, $overnight, $accommodation, $contact, $entrance_fee, $acc_fee, $payment, $check_in]);
+            $stmt = $pdo->prepare("INSERT INTO customer_logs (customer_name, pax, adults, seniors, children, customer_type, overnight, accommodation, contact_number, entrance_fee, accommodation_fee, payment_status, payment_method, check_in_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $pax, $adults, $seniors, $children, $type, $overnight, $accommodation, $contact, $entrance_fee, $acc_fee, $payment, $payment_method, $check_in]);
 
             if (!empty($accommodation)) {
-                $pdo->prepare("UPDATE accommodations SET status = 'Active' WHERE CONCAT(type, ' ', number) = ?")->execute([$accommodation]);
+                $accNames = array_map('trim', explode(',', $accommodation));
+                foreach ($accNames as $accName) {
+                    if (!empty($accName)) {
+                        $pdo->prepare("UPDATE accommodations SET status = 'Active' WHERE CONCAT(type, ' ', number) = ?")->execute([$accName]);
+                    }
+                }
             }
         } else {
             $id = $_POST['customer_id'];
-            // Removed total_amount from UPDATE statement
-            $stmt = $pdo->prepare("UPDATE customer_logs SET customer_name=?, pax=?, adults=?, seniors=?, children=?, customer_type=?, overnight=?, accommodation=?, contact_number=?, entrance_fee=?, accommodation_fee=?, payment_status=?, check_in_time=? WHERE id=?");
-            $stmt->execute([$name, $pax, $adults, $seniors, $children, $type, $overnight, $accommodation, $contact, $entrance_fee, $acc_fee, $payment, $check_in, $id]);
+            $stmt = $pdo->prepare("UPDATE customer_logs SET customer_name=?, pax=?, adults=?, seniors=?, children=?, customer_type=?, overnight=?, accommodation=?, contact_number=?, entrance_fee=?, accommodation_fee=?, payment_status=?, payment_method=?, check_in_time=? WHERE id=?");
+            $stmt->execute([$name, $pax, $adults, $seniors, $children, $type, $overnight, $accommodation, $contact, $entrance_fee, $acc_fee, $payment, $payment_method, $check_in, $id]);
         }
         header("Location: logbook.php");
         exit;
     }
-    
+
     // --- LOGBOOK CHECKOUT ---
     elseif ($action === 'checkout') {
         $customer_id = $_POST['customer_id'];
@@ -60,9 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $log = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($log && !empty($log['accommodation'])) {
-            // Set the room status back to Open
-            $updateAcc = $pdo->prepare("UPDATE accommodations SET status = 'Open' WHERE CONCAT(type, ' ', number) = ?");
-            $updateAcc->execute([$log['accommodation']]);
+            // Set all rooms back to Open (supports comma-separated)
+            $accNames = array_map('trim', explode(',', $log['accommodation']));
+            foreach ($accNames as $accName) {
+                if (!empty($accName)) {
+                    $updateAcc = $pdo->prepare("UPDATE accommodations SET status = 'Open' WHERE CONCAT(type, ' ', number) = ?");
+                    $updateAcc->execute([$accName]);
+                }
+            }
         }
 
         // 2. Stamp the checkout time
@@ -71,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         header("Location: logbook.php");
         exit;
-    } 
-    
+    }
+
     // --- LOGBOOK DELETE ---
     elseif ($action === 'delete') {
         $customer_id = $_POST['customer_id'];
@@ -83,7 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $log = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($log && is_null($log['check_out_time']) && !empty($log['accommodation'])) {
-            $pdo->prepare("UPDATE accommodations SET status = 'Open' WHERE CONCAT(type, ' ', number) = ?")->execute([$log['accommodation']]);
+            $accNames = array_map('trim', explode(',', $log['accommodation']));
+            foreach ($accNames as $accName) {
+                if (!empty($accName)) {
+                    $pdo->prepare("UPDATE accommodations SET status = 'Open' WHERE CONCAT(type, ' ', number) = ?")->execute([$accName]);
+                }
+            }
         }
 
         // Delete the record
@@ -93,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header("Location: logbook.php");
         exit;
     }
-    
+
     // --- ACCOMMODATION ACTIONS ---
     elseif ($action === 'add_acc' || $action === 'edit_acc') {
         $type = $_POST['type'];
@@ -148,10 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $entrance_fee = floatval($_POST['entrance_fee'] ?? 0);
         $accommodation_fee = floatval($_POST['accommodation_fee'] ?? 0);
         $payment_status = $_POST['payment_status'];
+        $payment_method = $_POST['payment_method'] ?? 'Cash';
 
-        // Removed total_amount from UPDATE statement
-        $stmt = $pdo->prepare("UPDATE customer_logs SET entrance_fee = ?, accommodation_fee = ?, payment_status = ? WHERE id = ?");
-        $stmt->execute([$entrance_fee, $accommodation_fee, $payment_status, $customer_id]);
+        $stmt = $pdo->prepare("UPDATE customer_logs SET entrance_fee = ?, accommodation_fee = ?, payment_status = ?, payment_method = ? WHERE id = ?");
+        $stmt->execute([$entrance_fee, $accommodation_fee, $payment_status, $payment_method, $customer_id]);
 
         header("Location: payments.php");
         exit;
@@ -159,9 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     // --- SETTINGS ACTIONS ---
     elseif ($action === 'update_settings') {
-        $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'fee_adult'")->execute([$_POST['fee_adult']]);
         $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'fee_senior'")->execute([$_POST['fee_senior']]);
-        $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'fee_child'")->execute([$_POST['fee_child']]);
+
+        // Daytour fees — INSERT if not existing yet
+        foreach (['fee_adult_day', 'fee_child_day', 'fee_senior_day', 'fee_adult_overnight', 'fee_child_overnight', 'fee_senior_overnight'] as $key) {
+            $val = $_POST[$key] ?? 0;
+            $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$key, $val, $val]);
+        }
+
         header("Location: settings.php?success=1");
         exit;
     }

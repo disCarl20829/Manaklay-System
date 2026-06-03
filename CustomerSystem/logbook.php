@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index .php");
     exit;
 }
 require 'db.php';
@@ -11,8 +11,8 @@ $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 $settingsJson = json_encode($settings);
 
-// Fetch Accommodations for dropdown
-$accStmt = $pdo->query("SELECT type, number, price_per_day FROM accommodations WHERE status = 'Open' ORDER BY type, number");
+// Fetch ALL accommodations for multi-picker (show status so user knows)
+$accStmt = $pdo->query("SELECT id, type, number, price_per_day, status FROM accommodations ORDER BY type, number");
 $accommodationsList = $accStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Handle Search Query
@@ -371,6 +371,125 @@ foreach ($logs as $log) {
             justify-content: flex-end;
             gap: 10px;
         }
+
+        .hidden-toggle {
+            display: none;
+        }
+
+        .toggle-button-label {
+            display: inline-flex;
+            cursor: pointer;
+            border: 2px solid #ccc;
+            border-radius: 20px;
+            padding: 5px;
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .toggle-button-label span {
+            padding: 8px 20px;
+            border-radius: 15px;
+            transition: 0.3s ease;
+        }
+
+        /* Default: Daytour Active */
+        .toggle-button-label .status-day {
+            background: #ffca28;
+            color: #000;
+        }
+
+        .toggle-button-label .status-night {
+            color: #888;
+        }
+
+        /* When Checked: Overnight Active */
+        .hidden-toggle:checked+.toggle-button-label .status-day {
+            background: transparent;
+            color: #888;
+        }
+
+        .hidden-toggle:checked+.toggle-button-label .status-night {
+            background: #3f51b5;
+            color: #fff;
+        }
+
+        /* Multi-accommodation picker */
+        .acc-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+            padding: 2px;
+        }
+
+        .acc-card {
+            border: 1.5px solid var(--border-color);
+            border-radius: 5px;
+            padding: 4px 9px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1.4;
+            transition: all 0.15s;
+            user-select: none;
+            background: #fff;
+            white-space: nowrap;
+        }
+
+        .acc-card:hover {
+            border-color: var(--primary-blue);
+            background: #F8FAFF;
+        }
+
+        .acc-card.selected {
+            border-color: var(--primary-blue);
+            background: #EFF6FF;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        .acc-card.unavailable {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #F3F4F6;
+        }
+
+        .acc-card .acc-status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        .acc-card .acc-status-dot.open {
+            background: #10B981;
+        }
+
+        .acc-card .acc-status-dot.active {
+            background: #F59E0B;
+        }
+
+        .acc-card .acc-status-dot.reserved {
+            background: #6366F1;
+        }
+
+        .acc-card .acc-status-dot.oos {
+            background: #EF4444;
+        }
+
+        .acc-card small {
+            display: none;
+        }
+
+        .acc-selected-summary {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 5px;
+            min-height: 16px;
+        }
     </style>
 </head>
 
@@ -507,7 +626,8 @@ foreach ($logs as $log) {
     <?= $row['entrance_fee'] ?? 0 ?>,
     <?= $row['accommodation_fee'] ?? 0 ?>,
     '<?= $row['payment_status'] ?>',
-    '<?= date('Y-m-d\TH:i', strtotime($row['check_in_time'])) ?>'
+    '<?= date('Y-m-d\TH:i', strtotime($row['check_in_time'])) ?>',
+    '<?= htmlspecialchars(addslashes($row['payment_method'] ?? 'Cash')) ?>'
 )">Edit</button>
                                     <form method="POST" action="actions.php" style="margin:0;">
                                         <input type="hidden" name="action" value="delete">
@@ -538,6 +658,8 @@ foreach ($logs as $log) {
                 <input type="hidden" name="pax" id="hidden_pax" value="0">
                 <input type="hidden" name="entrance_fee" id="hidden_entrance_fee" value="0">
                 <input type="hidden" name="total_amount" id="hidden_total_amount" value="0">
+                <!-- Hidden overnight fallback: always present; checkbox overrides with "Yes" -->
+                <input type="hidden" name="overnight" value="No">
 
                 <div class="form-grid">
                     <div class="form-group form-group-full">
@@ -558,11 +680,15 @@ foreach ($logs as $log) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Overnight</label>
-                        <select name="overnight">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
+                        <label>Tour Type:</label>
+                        <div class="tour-toggle-container">
+                            <input type="checkbox" id="overnight_toggle" name="overnight" value="Yes"
+                                class="hidden-toggle" onchange="calculateFees()">
+                            <label for="overnight_toggle" class="toggle-button-label">
+                                <span class="status-day">☀️ Daytour</span>
+                                <span class="status-night">🌙 Overnight</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="form-group"><label>Adults</label><input type="number" name="adults" id="adults" min="0"
@@ -575,27 +701,47 @@ foreach ($logs as $log) {
                     </div>
 
                     <div class="form-group form-group-full">
-                        <label>Accommodation</label>
-                        <select name="accommodation" id="accommodation_select" onchange="updateAccommodationPrice()"
-                            required>
-                            <option value="" data-price="0">-- Select Room/Cottage --</option>
-                            <?php foreach ($accommodationsList as $acc): ?>
-                                <option value="<?= $acc['type'] . ' ' . $acc['number'] ?>"
-                                    data-price="<?= htmlspecialchars($acc['price_per_day']) ?>">
-                                    <?= $acc['type'] . ' ' . $acc['number'] ?>
-                                    (₱<?= number_format($acc['price_per_day'], 2) ?>)
-                                </option>
+                        <label>Accommodations <span style="color:var(--text-muted); font-weight:400;">(click to select
+                                one or more)</span></label>
+                        <div class="acc-picker" id="acc_picker">
+                            <?php foreach ($accommodationsList as $acc):
+                                $accName = $acc['type'] . ' ' . $acc['number'];
+                                $statusLower = strtolower($acc['status']);
+                                $unavailable = in_array($acc['status'], ['Active', 'Reserved', 'Out of Service']);
+                                $dotClass = ['open' => 'open', 'active' => 'active', 'reserved' => 'reserved', 'out of service' => 'oos'][$statusLower] ?? 'open';
+                                ?>
+                                <div class="acc-card <?= $unavailable ? 'unavailable' : '' ?>"
+                                    data-name="<?= htmlspecialchars($accName) ?>"
+                                    data-price="<?= htmlspecialchars($acc['price_per_day']) ?>"
+                                    data-unavailable="<?= $unavailable ? '1' : '0' ?>" onclick="toggleAccCard(this)">
+                                    <span class="acc-status-dot <?= $dotClass ?>"></span>
+                                    <?= htmlspecialchars($accName) ?>
+                                    <br><small
+                                        style="color:var(--text-muted);">₱<?= number_format($acc['price_per_day'], 2) ?>
+                                        &bull; <?= $acc['status'] ?></small>
+                                </div>
                             <?php endforeach; ?>
-                        </select>
+                        </div>
+                        <div class="acc-selected-summary" id="acc_selected_summary">None selected</div>
+                        <!-- Hidden inputs populated by JS -->
+                        <input type="hidden" name="accommodation" id="hidden_accommodation" value="">
+                        <input type="hidden" name="accommodation_fee" id="accommodation_fee" value="0">
                     </div>
 
-                    <div class="form-group"><label>Accommodation Fee (₱)</label><input type="number" step="0.01"
-                            name="accommodation_fee" id="accommodation_fee" oninput="calculateFees()"></div>
                     <div class="form-group">
                         <label>Payment Status</label>
                         <select name="payment_status">
                             <option value="Partial">Partial</option>
                             <option value="Full">Complete</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mode of Payment</label>
+                        <select name="payment_method">
+                            <option value="Cash">💵 Cash</option>
+                            <option value="GCash">📱 GCash</option>
+                            <option value="Card">💳 Card</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer</option>
                         </select>
                     </div>
 
@@ -626,6 +772,8 @@ foreach ($logs as $log) {
                 <input type="hidden" name="pax" id="hidden_edit_pax" value="0">
                 <input type="hidden" name="entrance_fee" id="hidden_edit_entrance_fee" value="0">
                 <input type="hidden" name="total_amount" id="hidden_edit_total_amount" value="0">
+                <!-- Overnight fallback -->
+                <input type="hidden" name="overnight" value="No">
 
                 <div class="form-grid">
                     <div class="form-group form-group-full">
@@ -646,11 +794,15 @@ foreach ($logs as $log) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Overnight</label>
-                        <select name="overnight" id="edit_overnight">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
+                        <label>Tour Type:</label>
+                        <div class="tour-toggle-container">
+                            <input type="checkbox" id="edit_overnight_toggle" name="overnight" value="Yes"
+                                class="hidden-toggle" onchange="calculateEditFees()">
+                            <label for="edit_overnight_toggle" class="toggle-button-label">
+                                <span class="status-day">☀️ Daytour</span>
+                                <span class="status-night">🌙 Overnight</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Unique IDs and an updated oninput function -->
@@ -664,27 +816,44 @@ foreach ($logs as $log) {
                             id="edit_contact_number" required></div>
 
                     <div class="form-group form-group-full">
-                        <label>Accommodation</label>
-                        <select name="accommodation" id="edit_accommodation_select"
-                            onchange="updateEditAccommodationPrice()" required>
-                            <option value="" data-price="0">-- Select Room/Cottage --</option>
-                            <?php foreach ($accommodationsList as $acc): ?>
-                                <option value="<?= $acc['type'] . ' ' . $acc['number'] ?>"
-                                    data-price="<?= htmlspecialchars($acc['price_per_day']) ?>">
-                                    <?= $acc['type'] . ' ' . $acc['number'] ?>
-                                    (₱<?= number_format($acc['price_per_day'], 2) ?>)
-                                </option>
+                        <label>Accommodations <span style="color:var(--text-muted); font-weight:400;">(click to select
+                                one or more)</span></label>
+                        <div class="acc-picker" id="edit_acc_picker">
+                            <?php foreach ($accommodationsList as $acc):
+                                $accName = $acc['type'] . ' ' . $acc['number'];
+                                $statusLower = strtolower($acc['status']);
+                                $dotClass = ['open' => 'open', 'active' => 'active', 'reserved' => 'reserved', 'out of service' => 'oos'][$statusLower] ?? 'open';
+                                ?>
+                                <div class="acc-card" data-name="<?= htmlspecialchars($accName) ?>"
+                                    data-price="<?= htmlspecialchars($acc['price_per_day']) ?>" data-unavailable="0"
+                                    onclick="toggleEditAccCard(this)">
+                                    <span class="acc-status-dot <?= $dotClass ?>"></span>
+                                    <?= htmlspecialchars($accName) ?>
+                                    <br><small
+                                        style="color:var(--text-muted);">₱<?= number_format($acc['price_per_day'], 2) ?>
+                                        &bull; <?= $acc['status'] ?></small>
+                                </div>
                             <?php endforeach; ?>
-                        </select>
+                        </div>
+                        <div class="acc-selected-summary" id="edit_acc_selected_summary">None selected</div>
+                        <input type="hidden" name="accommodation" id="edit_hidden_accommodation" value="">
+                        <input type="hidden" name="accommodation_fee" id="edit_accommodation_fee" value="0">
                     </div>
 
-                    <div class="form-group"><label>Accommodation Fee (₱)</label><input type="number" step="0.01"
-                            name="accommodation_fee" id="edit_accommodation_fee" oninput="calculateEditFees()"></div>
                     <div class="form-group">
                         <label>Payment Status</label>
                         <select name="payment_status" id="edit_payment_status">
                             <option value="Partial">Partial</option>
                             <option value="Full">Complete</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mode of Payment</label>
+                        <select name="payment_method" id="edit_payment_method">
+                            <option value="Cash">💵 Cash</option>
+                            <option value="GCash">📱 GCash</option>
+                            <option value="Card">💳 Card</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer</option>
                         </select>
                     </div>
 
@@ -735,116 +904,145 @@ foreach ($logs as $log) {
             openModal('checkoutModal');
         }
 
-        // Add this or replace your existing edit function at the bottom of logbook.php
-        function openEditModal(id, name, contact, type, adults, seniors, children, acc, overnight, entrance, acc_fee, payment, checkIn) {
-            // Set the main customer ID hidden input
-            document.getElementById('edit_customer_id').value = id;
+        // ── Fee rates ──────────────────────────────────────────────────────
+        const fees = <?= $settingsJson ?>;
+        const RATES = {
+            daytour:   { adult: parseFloat(fees.fee_adult_day)        || 50,
+                         child: parseFloat(fees.fee_child_day)         || 30,
+                         senior: parseFloat(fees.fee_senior_day)       || 40 },
+            overnight: { adult: parseFloat(fees.fee_adult_overnight)   || 80,
+                         child: parseFloat(fees.fee_child_overnight)   || 50,
+                         senior: parseFloat(fees.fee_senior_overnight) || 70 }
+        };
 
-            // Set text and selection values using the actual HTML IDs
-            document.getElementById('edit_check_in_time').value = checkIn;
-            document.getElementById('edit_customer_name').value = name;
-            document.getElementById('edit_customer_type').value = type;
-            document.getElementById('edit_overnight').value = overnight;
-
-            // Set numerical counts
-            document.getElementById('edit_adults').value = adults;
-            document.getElementById('edit_seniors').value = seniors;
-            document.getElementById('edit_children').value = children;
-            document.getElementById('edit_contact_number').value = contact;
-
-            // Set accommodation and its fee
-            document.getElementById('edit_accommodation_select').value = acc;
-            document.getElementById('edit_accommodation_fee').value = acc_fee;
-            document.getElementById('edit_payment_status').value = payment;
-
-            // Recalculate fees for the edit modal so total displays correctly on open
-            calculateEditFees();
-
-            // Open the correct modal container ID
-            openModal('editModal');
+        function getEntranceFee(adults, seniors, children, isOvernight) {
+            const r = isOvernight ? RATES.overnight : RATES.daytour;
+            return (adults * r.adult) +
+                (seniors * r.senior) +
+                (children * r.child);
         }
 
-        const fees = <?= $settingsJson ?>;
+        // ── Add-modal accommodation picker ────────────────────────────────
+        function toggleAccCard(card) {
+            if (card.dataset.unavailable === '1') return;
+            card.classList.toggle('selected');
+            syncAccPicker();
+        }
 
+        function syncAccPicker() {
+            const cards = document.querySelectorAll('#acc_picker .acc-card.selected');
+            const names = [], prices = [];
+            cards.forEach(c => {
+                names.push(c.dataset.name);
+                prices.push(parseFloat(c.dataset.price) || 0);
+            });
+            const totalAccFee = prices.reduce((a, b) => a + b, 0);
+            document.getElementById('hidden_accommodation').value = names.join(', ');
+            document.getElementById('accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('acc_selected_summary').textContent =
+                names.length ? names.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+            calculateFees();
+        }
+
+        // ── Edit-modal accommodation picker ───────────────────────────────
+        function toggleEditAccCard(card) {
+            card.classList.toggle('selected');
+            syncEditAccPicker();
+        }
+
+        function syncEditAccPicker() {
+            const cards = document.querySelectorAll('#edit_acc_picker .acc-card.selected');
+            const names = [], prices = [];
+            cards.forEach(c => {
+                names.push(c.dataset.name);
+                prices.push(parseFloat(c.dataset.price) || 0);
+            });
+            const totalAccFee = prices.reduce((a, b) => a + b, 0);
+            document.getElementById('edit_hidden_accommodation').value = names.join(', ');
+            document.getElementById('edit_accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('edit_acc_selected_summary').textContent =
+                names.length ? names.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+            calculateEditFees();
+        }
+
+        // ── Fee calculations ──────────────────────────────────────────────
         function calculateFees() {
-            // 1. Gather counts and fees
-            let adults = parseInt(document.getElementById('adults').value) || 0;
-            let seniors = parseInt(document.getElementById('seniors').value) || 0;
-            let children = parseInt(document.getElementById('children').value) || 0;
-            let accFee = parseFloat(document.getElementById('accommodation_fee').value) || 0;
+            const adults = parseInt(document.getElementById('adults').value) || 0;
+            const seniors = parseInt(document.getElementById('seniors').value) || 0;
+            const children = parseInt(document.getElementById('children').value) || 0;
+            const accFee = parseFloat(document.getElementById('accommodation_fee').value) || 0;
+            const isOvernight = document.getElementById('overnight_toggle').checked;
 
-            // 2. Calculate pax and breakdown totals
-            let totalPax = adults + seniors + children;
-            let entranceFee = (adults * parseFloat(fees.fee_adult)) +
-                (seniors * parseFloat(fees.fee_senior)) +
-                (children * parseFloat(fees.fee_child));
+            const totalPax = adults + seniors + children;
+            const entranceFee = getEntranceFee(adults, seniors, children, isOvernight);
+            const totalAmount = entranceFee + accFee;
 
-            // 3. Calculate final amount
-            let totalAmount = entranceFee + accFee;
-
-            // 4. Update hidden inputs for actions.php
             document.getElementById('hidden_pax').value = totalPax;
             document.getElementById('hidden_entrance_fee').value = entranceFee.toFixed(2);
             document.getElementById('hidden_total_amount').value = totalAmount.toFixed(2);
-
-            // 5. Update front-end display
             document.getElementById('display_total').innerText = totalAmount.toFixed(2);
         }
 
         function calculateEditFees() {
-            // 1. Gather counts and fees from the Edit inputs
-            let adults = parseInt(document.getElementById('edit_adults').value) || 0;
-            let seniors = parseInt(document.getElementById('edit_seniors').value) || 0;
-            let children = parseInt(document.getElementById('edit_children').value) || 0;
-            let accFee = parseFloat(document.getElementById('edit_accommodation_fee').value) || 0;
+            const adults = parseInt(document.getElementById('edit_adults').value) || 0;
+            const seniors = parseInt(document.getElementById('edit_seniors').value) || 0;
+            const children = parseInt(document.getElementById('edit_children').value) || 0;
+            const accFee = parseFloat(document.getElementById('edit_accommodation_fee').value) || 0;
+            const isOvernight = document.getElementById('edit_overnight_toggle').checked;
 
-            // 2. Calculate pax and breakdown totals
-            let totalPax = adults + seniors + children;
-            let entranceFee = (adults * parseFloat(fees.fee_adult)) +
-                (seniors * parseFloat(fees.fee_senior)) +
-                (children * parseFloat(fees.fee_child));
+            const totalPax = adults + seniors + children;
+            const entranceFee = getEntranceFee(adults, seniors, children, isOvernight);
+            const totalAmount = entranceFee + accFee;
 
-            // 3. Calculate final amount
-            let totalAmount = entranceFee + accFee;
-
-            // 4. Update hidden inputs for actions.php
             document.getElementById('hidden_edit_pax').value = totalPax;
             document.getElementById('hidden_edit_entrance_fee').value = entranceFee.toFixed(2);
             document.getElementById('hidden_edit_total_amount').value = totalAmount.toFixed(2);
-
-            // 5. Update front-end display
             document.getElementById('display_edit_total').innerText = totalAmount.toFixed(2);
         }
 
-        function updateEditAccommodationPrice() {
-            let select = document.getElementById('edit_accommodation_select');
-            let price = select.options[select.selectedIndex].getAttribute('data-price');
+        // ── Open Edit Modal ───────────────────────────────────────────────
+        function openEditModal(id, name, contact, type, adults, seniors, children, acc, overnight, entrance, acc_fee, payment, checkIn, paymentMethod) {
+            document.getElementById('edit_customer_id').value = id;
+            document.getElementById('edit_check_in_time').value = checkIn;
+            document.getElementById('edit_customer_name').value = name;
+            document.getElementById('edit_customer_type').value = type;
+            document.getElementById('edit_adults').value = adults;
+            document.getElementById('edit_seniors').value = seniors;
+            document.getElementById('edit_children').value = children;
+            document.getElementById('edit_contact_number').value = contact;
+            document.getElementById('edit_payment_status').value = payment;
+            document.getElementById('edit_payment_method').value = paymentMethod || 'Cash';
 
-            document.getElementById('edit_accommodation_fee').value = price ? parseFloat(price).toFixed(2) : 0;
+            // Set overnight toggle
+            const toggle = document.getElementById('edit_overnight_toggle');
+            toggle.checked = (overnight === 'Yes');
 
-            // Automatically recalculate total when accommodation changes
+            // Pre-select accommodations from comma-separated string
+            const selectedNames = acc ? acc.split(', ').map(s => s.trim()) : [];
+            let totalAccFee = 0;
+            document.querySelectorAll('#edit_acc_picker .acc-card').forEach(card => {
+                if (selectedNames.includes(card.dataset.name)) {
+                    card.classList.add('selected');
+                    totalAccFee += parseFloat(card.dataset.price) || 0;
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+            document.getElementById('edit_hidden_accommodation').value = selectedNames.join(', ');
+            document.getElementById('edit_accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('edit_acc_selected_summary').textContent =
+                selectedNames.length ? selectedNames.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+
             calculateEditFees();
+            openModal('editModal');
         }
 
-        function updateAccommodationPrice() {
-            // Get the selected accommodation option
-            let select = document.getElementById('accommodation_select');
-            let selectedOption = select.options[select.selectedIndex];
-
-            // Get the price from the data-price attribute
-            let price = selectedOption.getAttribute('data-price');
-
-            // Update the accommodation fee input field
-            let feeInput = document.getElementById('accommodation_fee');
-            if (price && price > 0) {
-                feeInput.value = parseFloat(price).toFixed(2);
-            } else {
-                feeInput.value = '';
-            }
-
-            // Trigger the existing calculation to update the total
-            calculateFees();
-        }
+        // Reset add modal picker when it opens
+        document.getElementById('addModal').addEventListener('click', function (e) {
+            // only reset on backdrop click, not inner clicks — handled elsewhere
+        });
+        // Reset picker state when Add modal is opened via button
+        const _origOpenModal = openModal;
     </script>
 </body>
 

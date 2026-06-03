@@ -1,30 +1,51 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
 require 'db.php';
 date_default_timezone_set('Asia/Manila');
 
-// Create reports directory if it doesn't exist
-$reports_dir = __DIR__ . '/reports';
+$reports_dir = __DIR__ . DIRECTORY_SEPARATOR . 'reports';
 if (!is_dir($reports_dir)) {
     mkdir($reports_dir, 0777, true);
 }
 
-// Handle Report Generation
+// --- FILE DOWNLOAD ROUTER SUB-ENGINE ---
+if (isset($_GET['download']) && !empty($_GET['download'])) {
+    $target_file = basename($_GET['download']);
+    $full_download_path = $reports_dir . DIRECTORY_SEPARATOR . $target_file;
+
+    if (file_exists($full_download_path)) {
+        // Clear system buffers to prevent binary corruption drops
+        if (ob_get_level()) { ob_end_clean(); }
+        
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $target_file . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($full_download_path));
+        
+        readfile($full_download_path);
+        exit;
+    } else {
+        $error = "Requested historical excel archive log file tracking targets no longer exist.";
+    }
+}
+
+// --- GENERATION ACTION WORKFLOW ROUTER ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_report'])) {
     $report_type = $_POST['report_type'];
     $selected_date = $_POST['selected_date'];
 
-    // Determine Time Frame Boundaries
     if ($report_type === 'day') {
         $start_time = $selected_date . " 00:00:00";
         $end_time = $selected_date . " 23:59:59";
     } elseif ($report_type === 'week') {
-        // Find the Monday and Sunday of the selected date's week
         $start_time = date('Y-m-d 00:00:00', strtotime('monday this week', strtotime($selected_date)));
         $end_time = date('Y-m-d 23:59:59', strtotime('sunday this week', strtotime($selected_date)));
     } elseif ($report_type === 'month') {
@@ -32,62 +53,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_report'])) {
         $end_time = date('Y-m-t 23:59:59', strtotime($selected_date));
     }
 
-    // --- REPLACES THE PREVIOUS CSV GENERATION BLOCK IN reports.php ---
-
-    // Fetch Data
     $stmt = $pdo->prepare("SELECT customer_name, check_in_time, check_out_time, pax, adults, seniors, children, accommodation, overnight, payment_status, total_amount FROM customer_logs WHERE check_in_time BETWEEN ? AND ? ORDER BY check_in_time ASC");
     $stmt->execute([$start_time, $end_time]);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (count($logs) > 0) {
         $filename = "Manaklay_" . ucfirst($report_type) . "_Report_" . date('Ymd_His') . ".xlsx";
-        $filepath = $reports_dir . '/' . $filename;
+        $filepath = $reports_dir . DIRECTORY_SEPARATOR . $filename;
 
-        // 1. Create a temporary JSON file for Python to read
-        $temp_json = $reports_dir . '/temp_data_' . time() . '.json';
+        $temp_json = $reports_dir . DIRECTORY_SEPARATOR . 'temp_data_' . time() . '.json';
         file_put_contents($temp_json, json_encode($logs));
 
-        // 2. Prepare dates for the Excel Title
         $display_start = date('M d, Y', strtotime($start_time));
         $display_end = date('M d, Y', strtotime($end_time));
 
-        // 3. Execute the Python script
-        // Change this to your exact Python path if 'python' doesn't work (see Step 2 below)
-        $python_cmd = "python";
-        $script_path = __DIR__ . "/generate_excel.py";
+        // Isolated Environment Parameters Target Mapping Execution
+        $python_env_exe = 'C:\\xampp\\htdocs\\Manaklay-System\\.venv\\Scripts\\python.exe';
+        $script_path    = __DIR__ . DIRECTORY_SEPARATOR . "generate_excel.py";
 
-        // Added 2>&1 to capture standard errors from Python
-        $cmd = escapeshellcmd("$python_cmd \"$script_path\" \"$temp_json\" \"$filepath\" \"$report_type\" \"$display_start\" \"$display_end\"") . " 2>&1";
+        $arg_script = escapeshellarg($script_path);
+        $arg_json   = escapeshellarg($temp_json);
+        $arg_excel  = escapeshellarg($filepath);
+        $arg_type   = escapeshellarg($report_type);
+        $arg_start  = escapeshellarg($display_start);
+        $arg_end    = escapeshellarg($display_end);
+
+        $cmd = "\"$python_env_exe\" $arg_script $arg_json $arg_excel $arg_type $arg_start $arg_end 2>&1";
         $output = shell_exec($cmd);
 
-        // NEW DEBUGGING BLOCK: Check if file was actually created
-        if (!file_exists($filepath)) {
-            echo "<div style='padding:20px; background:#FEE2E2; border:1px solid #991B1B; color:#991B1B; font-family:sans-serif;'>";
-            echo "<h2>Excel Generation Failed!</h2>";
-            echo "<p><strong>Python Output / Error:</strong></p>";
-            echo "<pre style='background:#fff; padding:10px; border:1px solid #ccc;'>" . htmlspecialchars($output) . "</pre>";
-            echo "<p><strong>Executed Command:</strong><br><small>$cmd</small></p>";
-            echo "</div>";
-            exit; // Stop the script here so you can read the error
-        }
-
-        // 4. Clean up the temporary JSON file (Moved after our error check)
         if (file_exists($temp_json)) {
             unlink($temp_json);
         }
 
-        // 5. Save Record to Database
+        if (!file_exists($filepath)) {
+            echo "<div style='padding:30px; background:#FEE2E2; border:2px solid #991B1B; color:#991B1B; font-family:sans-serif; margin:20px; border-radius:8px;'>";
+            echo "<h2 style='margin-bottom:10px;'>Compilation Fault Intercepted!</h2>";
+            echo "<p><strong>Python Shell Error Trackback Trace Log:</strong></p>";
+            echo "<pre style='background:#fff; padding:15px; border:1px solid #FCA5A5; color:#000; overflow-x:auto; border-radius:4px;'>" . htmlspecialchars($output) . "</pre>";
+            echo "<p style='margin-top:10px;'><strong>Raw Execution Parameters Assembly Block:</strong><br><small style='color:#4B5563; font-family:monospace;'>" . htmlspecialchars($cmd) . "</small></p>";
+            echo "<button onclick='window.history.back()' style='margin-top:15px; padding:8px 16px; background:#991B1B; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;'>Return to Console Panel</button>";
+            echo "</div>";
+            exit;
+        }
+
         $stmt = $pdo->prepare("INSERT INTO report_history (filename, report_type, start_date, end_date) VALUES (?, ?, ?, ?)");
         $stmt->execute([$filename, $report_type, date('Y-m-d', strtotime($start_time)), date('Y-m-d', strtotime($end_time))]);
 
         header("Location: reports.php?success=1");
         exit;
     } else {
-        $error = "No data found for the selected time frame.";
+        $error = "No transaction logs mapped across selected metric parameters context constraints.";
     }
 }
 
-// Fetch Report History
 $history_stmt = $pdo->query("SELECT * FROM report_history ORDER BY generated_at DESC");
 $reports_history = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>

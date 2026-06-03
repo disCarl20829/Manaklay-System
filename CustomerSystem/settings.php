@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 require 'db.php';
@@ -212,22 +212,40 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
             <form action="actions.php" method="POST">
                 <input type="hidden" name="action" value="update_settings">
 
-                <h3 style="margin-bottom: 20px; color: var(--sidebar-bg);">Entrance Fees</h3>
-
+                <h3 style="margin-bottom: 20px; color: var(--sidebar-bg);">☀️ Daytour Entrance Fees</h3>
                 <div class="form-group">
                     <label>Adult Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_adult"
-                        value="<?= htmlspecialchars($settings['fee_adult']) ?>" required>
-                </div>
-                <div class="form-group">
-                    <label>Senior/PWD Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_senior"
-                        value="<?= htmlspecialchars($settings['fee_senior']) ?>" required>
+                    <input type="number" step="0.01" name="fee_adult_day"
+                        value="<?= htmlspecialchars($settings['fee_adult_day'] ?? 50) ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Child Fee (₱)</label>
-                    <input type="number" step="0.01" name="fee_child"
-                        value="<?= htmlspecialchars($settings['fee_child']) ?>" required>
+                    <input type="number" step="0.01" name="fee_child_day"
+                        value="<?= htmlspecialchars($settings['fee_child_day'] ?? 30) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Senior Fee (₱)</label>
+                    <input type="number" step="0.01" name="fee_senior_day"
+                        value="<?= htmlspecialchars($settings['fee_senior_day'] ?? 40) ?>" required>
+                </div>
+
+                <hr style="border:none; border-top:1px solid var(--border-color); margin: 24px 0;">
+
+                <h3 style="margin-bottom: 20px; color: var(--sidebar-bg);">🌙 Overnight Entrance Fees</h3>
+                <div class="form-group">
+                    <label>Adult Fee (₱)</label>
+                    <input type="number" step="0.01" name="fee_adult_overnight"
+                        value="<?= htmlspecialchars($settings['fee_adult_overnight'] ?? 80) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Child Fee (₱)</label>
+                    <input type="number" step="0.01" name="fee_child_overnight"
+                        value="<?= htmlspecialchars($settings['fee_child_overnight'] ?? 50) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Senior Fee (₱)</label>
+                    <input type="number" step="0.01" name="fee_senior_overnight"
+                        value="<?= htmlspecialchars($settings['fee_senior_overnight'] ?? 70) ?>" required>
                 </div>
 
                 <div style="margin-top: 30px; text-align: right;">
