@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 03, 2026 at 08:27 AM
--- Server version: 10.4.32-MariaDB
+-- Generation Time: Jun 07, 2026 at 08:48 AM
+-- Server version: 8.0.40
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -28,12 +28,12 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `accommodations` (
-  `id` int(11) NOT NULL,
-  `type` enum('Room','Cottage','Function Hall','Dormitory','Conference Hall','Conference Room','Others') NOT NULL,
-  `number` varchar(50) NOT NULL,
-  `price_per_day` decimal(10,2) DEFAULT 0.00,
-  `status` enum('Open','Reserved','Active','Out of Service') DEFAULT 'Open',
-  `notes` text DEFAULT NULL
+  `id` int NOT NULL,
+  `type` enum('Room','Cottage','Function Hall','Dormitory','Conference Hall','Conference Room','Others') COLLATE utf8mb4_general_ci NOT NULL,
+  `number` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `price_per_day` decimal(10,2) DEFAULT '0.00',
+  `status` enum('Open','Reserved','Active','Out of Service') COLLATE utf8mb4_general_ci DEFAULT 'Open',
+  `notes` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -52,8 +52,8 @@ INSERT INTO `accommodations` (`id`, `type`, `number`, `price_per_day`, `status`,
 (9, 'Cottage', 'A2', 500.00, 'Open', ''),
 (10, 'Cottage', 'A3', 500.00, 'Open', ''),
 (11, 'Cottage', 'A4', 500.00, 'Open', ''),
-(12, 'Cottage', 'A5', 500.00, 'Open', ''),
-(13, 'Cottage', 'A6', 500.00, 'Active', ''),
+(12, 'Cottage', 'A5', 500.00, 'Active', ''),
+(13, 'Cottage', 'A6', 500.00, 'Open', ''),
 (14, 'Cottage', 'A7', 500.00, 'Open', ''),
 (15, 'Room', 'A8', 500.00, 'Open', ''),
 (16, 'Cottage', 'B1', 600.00, 'Open', ''),
@@ -66,16 +66,16 @@ INSERT INTO `accommodations` (`id`, `type`, `number`, `price_per_day`, `status`,
 (23, 'Cottage', 'B8', 600.00, 'Open', ''),
 (24, 'Cottage', 'B9', 600.00, 'Open', ''),
 (25, 'Cottage', 'B10', 600.00, 'Open', ''),
-(26, 'Cottage', 'B11', 600.00, 'Active', NULL),
-(27, 'Cottage', 'B12', 600.00, 'Active', NULL),
+(26, 'Cottage', 'B11', 600.00, 'Open', NULL),
+(27, 'Cottage', 'B12', 600.00, 'Open', NULL),
 (29, 'Dormitory', '1', 12500.00, 'Open', '28pax'),
 (30, 'Dormitory', '2', 10000.00, 'Open', 'non-aircon, 20pax'),
 (31, 'Dormitory', '3', 10000.00, 'Open', 'non-aircon, 20pax'),
-(32, 'Dormitory', '4', 10000.00, 'Open', 'non-aircon, 20pax'),
+(32, 'Dormitory', '4', 10000.00, 'Active', 'non-aircon, 20pax'),
 (34, 'Function Hall', '1', 6000.00, 'Open', '50pax, 6hours'),
-(35, 'Conference Room', '1', 6000.00, 'Open', '50pax, 6hours'),
-(36, 'Others', 'Tables&Chairs', 400.00, 'Open', '6seaters'),
-(37, 'Others', 'Tables&Chairs', 350.00, 'Open', '4seaters');
+(35, 'Conference Room', '1', 6000.00, 'Active', '50pax, 6hours'),
+(36, 'Others', 'Tables&Chairs', 400.00, 'Active', '6seaters'),
+(37, 'Others', 'Tables&Chairs', 350.00, 'Active', '4seaters');
 
 -- --------------------------------------------------------
 
@@ -84,33 +84,32 @@ INSERT INTO `accommodations` (`id`, `type`, `number`, `price_per_day`, `status`,
 --
 
 CREATE TABLE `customer_logs` (
-  `id` int(11) NOT NULL,
-  `customer_name` varchar(255) NOT NULL,
-  `pax` int(11) NOT NULL,
-  `adults` int(11) DEFAULT 0,
-  `seniors` int(11) DEFAULT 0,
-  `children` int(11) DEFAULT 0,
-  `customer_type` enum('Walk-in','Reservation') NOT NULL,
-  `overnight` enum('Yes','No') NOT NULL,
-  `accommodation` varchar(100) NOT NULL,
-  `check_in_time` datetime DEFAULT current_timestamp(),
+  `id` int NOT NULL,
+  `customer_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `pax` int NOT NULL,
+  `adults` int DEFAULT '0',
+  `seniors` int DEFAULT '0',
+  `children` int DEFAULT '0',
+  `customer_type` enum('Walk-in','Reservation') COLLATE utf8mb4_general_ci NOT NULL,
+  `overnight` enum('Yes','No') COLLATE utf8mb4_general_ci NOT NULL,
+  `accommodation` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `check_in_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `check_out_time` datetime DEFAULT NULL,
-  `contact_number` varchar(20) NOT NULL,
-  `entrance_fee` decimal(10,2) DEFAULT 0.00,
-  `accommodation_fee` decimal(10,2) DEFAULT 0.00,
-  `total_amount` decimal(10,2) GENERATED ALWAYS AS (`entrance_fee` + `accommodation_fee`) STORED,
-  `payment_status` enum('Partial','Full') DEFAULT 'Partial',
-  `payment_method` varchar(50) DEFAULT 'Cash'
+  `contact_number` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  `entrance_fee` decimal(10,2) DEFAULT '0.00',
+  `accommodation_fee` decimal(10,2) DEFAULT '0.00',
+  `total_amount` decimal(10,2) GENERATED ALWAYS AS ((`entrance_fee` + `accommodation_fee`)) STORED,
+  `payment_status` enum('Partial','Full') COLLATE utf8mb4_general_ci DEFAULT 'Partial',
+  `notes` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customer_logs`
 --
 
-INSERT INTO `customer_logs` (`id`, `customer_name`, `pax`, `adults`, `seniors`, `children`, `customer_type`, `overnight`, `accommodation`, `check_in_time`, `check_out_time`, `contact_number`, `entrance_fee`, `accommodation_fee`, `payment_status`, `payment_method`) VALUES
-(3, 'Deo', 6, 2, 2, 2, 'Walk-in', 'No', 'Room 2, Cottage A5', '2026-06-03 07:35:00', '2026-06-03 14:07:49', '0912312312', 240.00, 4499.00, 'Partial', 'Cash'),
-(7, 'John', 25, 1, 12, 12, 'Walk-in', 'No', 'Cottage B11', '2026-06-20 08:13:00', NULL, '0912312312', 890.00, 600.00, 'Partial', 'GCash'),
-(8, 'Deo', 12, 4, 4, 4, 'Reservation', 'Yes', 'Cottage A6, Cottage B12', '2026-06-04 08:23:00', NULL, '0912312312', 800.00, 1100.00, 'Partial', 'Cash');
+INSERT INTO `customer_logs` (`id`, `customer_name`, `pax`, `adults`, `seniors`, `children`, `customer_type`, `overnight`, `accommodation`, `check_in_time`, `check_out_time`, `contact_number`, `entrance_fee`, `accommodation_fee`, `payment_status`, `notes`) VALUES
+(9, 'roy', 30, 5, 20, 5, 'Walk-in', 'Yes', 'Dormitory 4, Conference Room 1, Others Tables&Chairs', '2026-06-06 06:44:00', NULL, '0912312', 2050.00, 16350.00, 'Partial', ''),
+(10, 'roy', 30, 5, 20, 5, 'Walk-in', 'Yes', 'Cottage A5', '2026-06-07 08:15:00', NULL, '09786856', 2050.00, 500.00, 'Partial', '');
 
 -- --------------------------------------------------------
 
@@ -119,17 +118,17 @@ INSERT INTO `customer_logs` (`id`, `customer_name`, `pax`, `adults`, `seniors`, 
 --
 
 CREATE TABLE `expenses` (
-  `expense_id` int(11) NOT NULL,
-  `category_id` int(11) DEFAULT NULL,
+  `expense_id` int NOT NULL,
+  `category_id` int DEFAULT NULL,
   `expense_date` date NOT NULL,
-  `description` text DEFAULT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
   `amount` decimal(10,2) NOT NULL,
-  `reference` varchar(100) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `notes` text DEFAULT NULL,
-  `category` varchar(100) DEFAULT 'Others',
-  `payment_method` varchar(50) DEFAULT 'cash'
+  `reference` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `notes` text COLLATE utf8mb4_general_ci,
+  `category` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Others',
+  `payment_method` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'cash'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -146,10 +145,10 @@ INSERT INTO `expenses` (`expense_id`, `category_id`, `expense_date`, `descriptio
 --
 
 CREATE TABLE `expenses_categories` (
-  `category_id` int(11) NOT NULL,
-  `category_name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `category_id` int NOT NULL,
+  `category_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -168,20 +167,43 @@ INSERT INTO `expenses_categories` (`category_id`, `category_name`, `description`
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `payment_transactions`
+--
+
+CREATE TABLE `payment_transactions` (
+  `id` int NOT NULL,
+  `customer_log_id` int NOT NULL,
+  `amount_paid` decimal(10,2) NOT NULL,
+  `payment_method` varchar(50) NOT NULL,
+  `remarks` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `payment_transactions`
+--
+
+INSERT INTO `payment_transactions` (`id`, `customer_log_id`, `amount_paid`, `payment_method`, `remarks`, `created_at`) VALUES
+(1, 9, 500.00, 'Cash', 'f', '2026-06-06 12:45:44'),
+(2, 9, 4000.00, 'Cash', NULL, '2026-06-06 12:46:09');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `products`
 --
 
 CREATE TABLE `products` (
-  `product_id` int(11) NOT NULL,
-  `category_id` int(11) DEFAULT NULL,
-  `product_name` varchar(200) NOT NULL,
-  `description` text DEFAULT NULL,
+  `product_id` int NOT NULL,
+  `category_id` int DEFAULT NULL,
+  `product_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
   `unit_price` decimal(10,2) NOT NULL,
   `cost_price` decimal(10,2) NOT NULL,
-  `stock_quantity` int(11) DEFAULT 0,
-  `reorder_level` int(11) DEFAULT 10,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `image` varchar(255) DEFAULT 'default.png'
+  `stock_quantity` int DEFAULT '0',
+  `reorder_level` int DEFAULT '10',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT 'default.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -200,10 +222,10 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 --
 
 CREATE TABLE `product_categories` (
-  `category_id` int(11) NOT NULL,
-  `category_name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `category_id` int NOT NULL,
+  `category_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -229,13 +251,13 @@ INSERT INTO `product_categories` (`category_id`, `category_name`, `description`,
 --
 
 CREATE TABLE `product_transactions` (
-  `transaction_id` int(11) NOT NULL,
-  `product_id` int(11) DEFAULT NULL,
-  `quantity` int(11) NOT NULL,
+  `transaction_id` int NOT NULL,
+  `product_id` int DEFAULT NULL,
+  `quantity` int NOT NULL,
   `unit_price` decimal(10,2) DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `transaction_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `user_id` int(11) DEFAULT NULL
+  `notes` text COLLATE utf8mb4_general_ci,
+  `transaction_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_id` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -256,12 +278,12 @@ INSERT INTO `product_transactions` (`transaction_id`, `product_id`, `quantity`, 
 --
 
 CREATE TABLE `reports` (
-  `report_id` int(11) NOT NULL,
-  `report_name` varchar(255) NOT NULL,
-  `file_path` varchar(255) NOT NULL,
+  `report_id` int NOT NULL,
+  `report_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `file_path` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -278,12 +300,12 @@ INSERT INTO `reports` (`report_id`, `report_name`, `file_path`, `start_date`, `e
 --
 
 CREATE TABLE `report_history` (
-  `id` int(11) NOT NULL,
-  `filename` varchar(255) NOT NULL,
-  `report_type` varchar(50) NOT NULL,
+  `id` int NOT NULL,
+  `filename` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `report_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
-  `generated_at` datetime DEFAULT current_timestamp()
+  `generated_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -304,7 +326,7 @@ INSERT INTO `report_history` (`id`, `filename`, `report_type`, `start_date`, `en
 --
 
 CREATE TABLE `settings` (
-  `setting_key` varchar(50) NOT NULL,
+  `setting_key` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `setting_value` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -327,13 +349,13 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 --
 
 CREATE TABLE `users` (
-  `user_id` int(11) NOT NULL,
-  `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `full_name` varchar(100) NOT NULL,
-  `email` varchar(100) DEFAULT NULL,
-  `role` enum('admin','staff') DEFAULT 'staff',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `user_id` int NOT NULL,
+  `username` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `full_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `email` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `role` enum('admin','staff') COLLATE utf8mb4_general_ci DEFAULT 'staff',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -373,6 +395,13 @@ ALTER TABLE `expenses`
 --
 ALTER TABLE `expenses_categories`
   ADD PRIMARY KEY (`category_id`);
+
+--
+-- Indexes for table `payment_transactions`
+--
+ALTER TABLE `payment_transactions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `customer_log_id` (`customer_log_id`);
 
 --
 -- Indexes for table `products`
@@ -428,61 +457,67 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `accommodations`
 --
 ALTER TABLE `accommodations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT for table `customer_logs`
 --
 ALTER TABLE `customer_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `expenses`
 --
 ALTER TABLE `expenses`
-  MODIFY `expense_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `expense_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `expenses_categories`
 --
 ALTER TABLE `expenses_categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `category_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `payment_transactions`
+--
+ALTER TABLE `payment_transactions`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `product_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `product_categories`
 --
 ALTER TABLE `product_categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `category_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `product_transactions`
 --
 ALTER TABLE `product_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `transaction_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `reports`
 --
 ALTER TABLE `reports`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `report_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `report_history`
 --
 ALTER TABLE `report_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `user_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
@@ -494,6 +529,12 @@ ALTER TABLE `users`
 ALTER TABLE `expenses`
   ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `expenses_categories` (`category_id`),
   ADD CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `payment_transactions`
+--
+ALTER TABLE `payment_transactions`
+  ADD CONSTRAINT `payment_transactions_ibfk_1` FOREIGN KEY (`customer_log_id`) REFERENCES `customer_logs` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `products`
