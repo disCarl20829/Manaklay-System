@@ -6,18 +6,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 require 'db.php';
 
-// Fetch Settings for JS calculation
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 $settingsJson = json_encode($settings);
 
-// Fetch ALL accommodations for multi-picker
 $accStmt = $pdo->query("SELECT id, type, number, price_per_day, status FROM accommodations ORDER BY type, number");
 $accommodationsList = $accStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ── Date-aware availability ───────────────────────────────────────────────────
-// Blocked = accommodation is in an active log where check_in_time is TODAY
-// Future reservations (check_in_time > today) do NOT block today's new entries
 $blockedStmt = $pdo->query(
     "SELECT DISTINCT accommodation FROM customer_logs
      WHERE check_out_time IS NULL
@@ -25,7 +20,6 @@ $blockedStmt = $pdo->query(
 );
 $blockedRows = $blockedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Build a flat set of blocked accommodation names
 $blockedAccNames = [];
 foreach ($blockedRows as $accString) {
     foreach (explode(', ', $accString) as $name) {
@@ -33,9 +27,10 @@ foreach ($blockedRows as $accString) {
     }
 }
 
-// Handle Search Query
 $search = $_GET['search'] ?? '';
-$query = "SELECT * FROM customer_logs";
+$sort = $_GET['sort'] ?? 'reservation_date';
+$query = "SELECT customer_logs.*, SUM(COALESCE(payment_transactions.amount_paid, 0)) AS total_amount_paid FROM customer_logs
+ LEFT JOIN payment_transactions ON customer_logs.id = payment_transactions.customer_log_id GROUP BY customer_logs.id";
 $params = [];
 
 if (!empty($search)) {
@@ -45,12 +40,25 @@ if (!empty($search)) {
     $params[] = "%$search%";
 }
 
-$query .= " ORDER BY check_in_time DESC";
+switch ($sort) {
+    case 'customer_name':
+        $query .= " ORDER BY customer_name ASC";
+        break;
+
+    case 'date_added':
+        $query .= " ORDER BY id DESC";
+        break;
+
+    case 'reservation_date':
+    default:
+        $query .= " ORDER BY check_in_time DESC";
+        break;
+}
+
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// --- Calculate Dashboard KPIs ---
 $totalCustomers = count($logs);
 $walkIns = 0;
 $reservations = 0;
@@ -434,7 +442,6 @@ foreach ($logs as $log) {
             color: #fff;
         }
 
-        /* Accommodation picker */
         .acc-picker {
             display: flex;
             flex-wrap: wrap;
@@ -456,6 +463,11 @@ foreach ($logs as $log) {
             user-select: none;
             background: #fff;
             white-space: nowrap;
+            pointer-events: auto;
+        }
+
+        .acc-card * {
+            pointer-events: none;
         }
 
         .acc-card:hover {
@@ -470,7 +482,6 @@ foreach ($logs as $log) {
             font-weight: 600;
         }
 
-        /* Blocked today = occupied by an active guest today */
         .acc-card.blocked-today {
             opacity: 0.4;
             cursor: not-allowed;
@@ -510,7 +521,6 @@ foreach ($logs as $log) {
             min-height: 16px;
         }
 
-        /* Legend */
         .acc-legend {
             display: flex;
             gap: 12px;
@@ -540,6 +550,14 @@ foreach ($logs as $log) {
         .swatch-blocked {
             background: #FEF2F2;
             border: 1.5px solid #FECACA;
+        }
+
+        .checkin-hint {
+            font-size: 11px;
+            color: var(--accent-orange);
+            margin-top: 4px;
+            min-height: 14px;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -571,6 +589,44 @@ foreach ($logs as $log) {
             <h1>Dashboard</h1>
         </div>
 
+        <div class="calendar-dashboard"
+            style="display:flex;gap:20px;margin-bottom:30px;background:var(--card-bg);padding:20px;border-radius:12px;border:1px solid var(--border-color);box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+            <div class="calendar-widget" style="flex:1;min-width:300px;">
+                <div class="calendar-header"
+                    style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                    <h3 id="calendarMonthYear" style="color:var(--sidebar-bg);font-size:18px;"></h3>
+                    <div>
+                        <button type="button" class="btn btn-primary" style="padding:5px 10px;font-size:12px;"
+                            onclick="changeMonth(-1)">&lt;</button>
+                        <button type="button" class="btn btn-primary" style="padding:5px 10px;font-size:12px;"
+                            onclick="changeMonth(1)">&gt;</button>
+                    </div>
+                </div>
+                <div
+                    style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                </div>
+                <div id="calendarDatesGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;"></div>
+            </div>
+            <div
+                style="flex:1.5;border-left:1px solid var(--border-color);padding-left:20px;max-height:290px;overflow-y:auto;">
+                <h3 style="color:var(--sidebar-bg);font-size:16px;margin-bottom:12px;">
+                    Bookings for <span id="selectedDateLabel"
+                        style="color:var(--accent-orange);font-weight:bold;">(Select a Date)</span>
+                </h3>
+                <div id="calendarReservationsContainer">
+                    <p style="color:var(--text-muted);font-size:14px;font-style:italic;">Click on any calendar day with
+                        data to review scheduled check-ins.</p>
+                </div>
+            </div>
+        </div>
+
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Total Records</div>
@@ -578,7 +634,7 @@ foreach ($logs as $log) {
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Currently Checked In</div>
-                <div class="kpi-value" style="color: var(--accent-orange)"><?= $currentlyCheckedIn ?></div>
+                <div class="kpi-value" style="color:var(--accent-orange)"><?= $currentlyCheckedIn ?></div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Walk-ins</div>
@@ -596,10 +652,19 @@ foreach ($logs as $log) {
                     <input type="text" name="search" class="search-input"
                         placeholder="Search transactions, customers, accommodations..."
                         value="<?= htmlspecialchars($search) ?>">
+                    <select name="sort" class="search-input" style="max-width:180px;">
+                        <option value="reservation_date" <?= $sort == 'reservation_date' ? 'selected' : '' ?>>
+                            Reservation Date
+                        </option>
+                        <option value="customer_name" <?= $sort == 'customer_name' ? 'selected' : '' ?>>
+                            Customer Name
+                        </option>
+                        <option value="date_added" <?= $sort == 'date_added' ? 'selected' : '' ?>>
+                            Date Added
+                        </option>
+                    </select>
                     <button type="submit" class="btn btn-primary">Search</button>
-                    <?php if (!empty($search)): ?>
-                        <a href="logbook.php" class="btn btn-clear">Clear</a>
-                    <?php endif; ?>
+                    <?php if (!empty($search)): ?><a href="logbook.php?sort=<?= urlencode($sort) ?>" class="btn btn-clear">Clear</a><?php endif; ?>
                 </form>
                 <button class="btn btn-accent" onclick="openModal('addModal')">+ Add Customer</button>
             </div>
@@ -623,8 +688,9 @@ foreach ($logs as $log) {
                     <?php if (count($logs) > 0): ?>
                         <?php foreach ($logs as $row): ?>
                             <tr>
-                                <td style="font-weight:600; color:var(--text-dark);">
-                                    <?= htmlspecialchars($row['customer_name']) ?></td>
+                                <td style="font-weight:600;color:var(--text-dark);">
+                                    <?= htmlspecialchars($row['customer_name']) ?>
+                                </td>
                                 <td><?= htmlspecialchars($row['pax']) ?></td>
                                 <td><?= htmlspecialchars($row['customer_type']) ?></td>
                                 <td><?= htmlspecialchars($row['accommodation']) ?></td>
@@ -639,34 +705,37 @@ foreach ($logs as $log) {
                                 <td><?= $row['check_out_time'] ? date('M d, y g:i A', strtotime($row['check_out_time'])) : '--' ?>
                                 </td>
                                 <td><?= htmlspecialchars($row['contact_number']) ?></td>
-                                <td style="max-width:160px; white-space:pre-wrap; font-size:13px; color:var(--text-muted);">
+                                <td style="max-width:160px;white-space:pre-wrap;font-size:13px;color:var(--text-muted);">
                                     <?= htmlspecialchars($row['notes'] ?? '') ?>
                                 </td>
-                                <td style="display:flex; gap:5px;">
+                                <td style="display:flex;gap:5px;">
                                     <?php if (!$row['check_out_time']): ?>
-                                        <button class="btn btn-success" style="padding:6px 10px; font-size:12px;"
+                                        <button class="btn btn-success" style="padding:6px 10px;font-size:12px;"
                                             onclick="openCheckoutModal(<?= $row['id'] ?>)">Out</button>
                                     <?php endif; ?>
-                                    <button type="button" class="btn btn-primary" onclick="openEditModal(
-                                    <?= $row['id'] ?>,
-                                    '<?= htmlspecialchars(addslashes($row['customer_name'])) ?>',
-                                    '<?= htmlspecialchars(addslashes($row['contact_number'])) ?>',
-                                    '<?= $row['customer_type'] ?>',
-                                    <?= $row['adults'] ?? 0 ?>,
-                                    <?= $row['seniors'] ?? 0 ?>,
-                                    <?= $row['children'] ?? 0 ?>,
-                                    '<?= htmlspecialchars(addslashes($row['accommodation'])) ?>',
-                                    '<?= $row['overnight'] ?>',
-                                    <?= $row['entrance_fee'] ?? 0 ?>,
-                                    <?= $row['accommodation_fee'] ?? 0 ?>,
-                                    '<?= $row['payment_status'] ?>',
-                                    '<?= date('Y-m-d\TH:i', strtotime($row['check_in_time'])) ?>',
-                                    '<?= htmlspecialchars(addslashes($row['notes'] ?? '')) ?>'
-                                )">Edit</button>
+                                    <button type="button" class="btn btn-primary" onclick='openEditModal(
+                                    <?= json_encode($row["id"]) ?>,
+                                    <?= json_encode($row["customer_name"]) ?>,
+                                    <?= json_encode($row["contact_number"]) ?>,
+                                    <?= json_encode($row["customer_type"]) ?>,
+                                    <?= json_encode($row["adults"] ?? 0) ?>,
+                                    <?= json_encode($row["seniors"] ?? 0) ?>,
+                                    <?= json_encode($row["children"] ?? 0) ?>,
+                                    <?= json_encode($row["accommodation"]) ?>,
+                                    <?= json_encode($row["overnight"]) ?>,
+                                    <?= json_encode($row["entrance_fee"] ?? 0) ?>,
+                                    <?= json_encode($row["accommodation_fee"] ?? 0) ?>,
+                                    <?= json_encode($row["payment_status"]) ?>,
+<?= json_encode(date('Y-m-d\TH:i', strtotime($row['check_in_time']))) ?>,
+                                    <?= json_encode($row["notes"] ?? "") ?>,
+                                    <?= json_encode((float) $row["total_amount_paid"]) ?>
+                                )'>Edit</button>
+
                                     <form method="POST" action="actions.php" style="margin:0;">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="customer_id" value="<?= $row['id'] ?>">
-                                        <button type="submit" class="btn btn-danger" style="padding:6px 10px; font-size:12px;"
+                                        <input type="hidden" name="total_amount_paid" value="<?= $row['total_amount_paid'] ?>">
+                                        <button type="submit" class="btn btn-danger" style="padding:6px 10px;font-size:12px;"
                                             onclick="return confirm('Delete this record?');">Del</button>
                                     </form>
                                 </td>
@@ -674,7 +743,7 @@ foreach ($logs as $log) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">No records
+                            <td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted);">No records
                                 found.</td>
                         </tr>
                     <?php endif; ?>
@@ -683,9 +752,7 @@ foreach ($logs as $log) {
         </div>
     </main>
 
-    <!-- ══════════════════════════════════════════════════════════
-     ADD MODAL
-══════════════════════════════════════════════════════════ -->
+    <!-- ADD MODAL -->
     <div id="addModal" class="modal">
         <div class="modal-content" style="width:600px;">
             <h3>Add New Customer</h3>
@@ -701,6 +768,7 @@ foreach ($logs as $log) {
                         <label>Check In Time</label>
                         <input type="datetime-local" name="check_in_time" id="add_check_in_time"
                             value="<?= date('Y-m-d\TH:i') ?>" required onchange="refreshAddPicker()">
+                        <div class="checkin-hint" id="add_checkin_hint"></div>
                     </div>
                     <div class="form-group form-group-full">
                         <label>Customer Name</label>
@@ -734,7 +802,7 @@ foreach ($logs as $log) {
                     </div>
 
                     <div class="form-group form-group-full">
-                        <label>Accommodations <span style="color:var(--text-muted); font-weight:400;">(click to select
+                        <label>Accommodations <span style="color:var(--text-muted);font-weight:400;">(click to select
                                 one or more)</span></label>
                         <div class="acc-legend">
                             <div class="acc-legend-item">
@@ -756,8 +824,7 @@ foreach ($logs as $log) {
                                     data-name="<?= htmlspecialchars($accName) ?>"
                                     data-price="<?= htmlspecialchars($acc['price_per_day']) ?>"
                                     data-blocked="<?= ($isOos || $blockedNow) ? '1' : '0' ?>"
-                                    data-base-price="<?= htmlspecialchars($acc['price_per_day']) ?>"
-                                    onclick="toggleAccCard(this)"
+                                    data-oos="<?= $isOos ? '1' : '0' ?>" onclick="toggleAccCard(this)"
                                     title="<?= $blockedNow ? 'Occupied today' : ($isOos ? 'Out of service' : '') ?>">
                                     <span class="acc-status-dot <?= $dotClass ?>"></span>
                                     <?= htmlspecialchars($accName) ?>
@@ -782,7 +849,7 @@ foreach ($logs as $log) {
                     <div class="form-group">
                         <label>Amount Paid Now (₱)</label>
                         <input type="number" name="amount_paid" id="add_amount_paid" min="0" step="0.01"
-                            placeholder="e.g. 500.00">
+                            placeholder="e.g. 500.00" oninput="calculateFees()">
                     </div>
                     <div class="form-group">
                         <label>Payment Method</label>
@@ -797,17 +864,15 @@ foreach ($logs as $log) {
                         <label>Payment Remarks</label>
                         <input type="text" name="remarks" placeholder="e.g. Downpayment, Full cash, etc.">
                     </div>
-
                     <div class="form-group form-group-full">
                         <label>Notes</label>
                         <textarea name="notes"
                             placeholder="Optional notes about this customer or booking..."></textarea>
                     </div>
-
                     <div class="form-group form-group-full"
-                        style="background:var(--bg-light); padding:15px; border-radius:8px; text-align:right;">
-                        <span style="font-size:14px; color:var(--text-muted);">Total Expected Fees:</span>
-                        <strong style="font-size:24px; color:var(--accent-orange); display:block;">₱<span
+                        style="background:var(--bg-light);padding:15px;border-radius:8px;text-align:right;">
+                        <span style="font-size:14px;color:var(--text-muted);">Total Expected Fees:</span>
+                        <strong style="font-size:24px;color:var(--accent-orange);display:block;">₱<span
                                 id="display_total">0.00</span></strong>
                     </div>
                 </div>
@@ -820,9 +885,7 @@ foreach ($logs as $log) {
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-     EDIT MODAL
-══════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODAL -->
     <div id="editModal" class="modal">
         <div class="modal-content" style="width:600px;">
             <h3>Edit Customer</h3>
@@ -839,6 +902,7 @@ foreach ($logs as $log) {
                         <label>Check In Time</label>
                         <input type="datetime-local" name="check_in_time" id="edit_check_in_time" required
                             onchange="refreshEditPicker()">
+                        <div class="checkin-hint" id="edit_checkin_hint"></div>
                     </div>
                     <div class="form-group form-group-full">
                         <label>Customer Name</label>
@@ -872,7 +936,7 @@ foreach ($logs as $log) {
                             id="edit_contact_number" required></div>
 
                     <div class="form-group form-group-full">
-                        <label>Accommodations <span style="color:var(--text-muted); font-weight:400;">(click to select
+                        <label>Accommodations <span style="color:var(--text-muted);font-weight:400;">(click to select
                                 one or more)</span></label>
                         <div class="acc-legend">
                             <div class="acc-legend-item">
@@ -891,7 +955,6 @@ foreach ($logs as $log) {
                                 ?>
                                 <div class="acc-card" data-name="<?= htmlspecialchars($accName) ?>"
                                     data-price="<?= htmlspecialchars($acc['price_per_day']) ?>"
-                                    data-base-price="<?= htmlspecialchars($acc['price_per_day']) ?>"
                                     data-oos="<?= $isOos ? '1' : '0' ?>" data-blocked="0" onclick="toggleEditAccCard(this)">
                                     <span class="acc-status-dot <?= $dotClass ?>"></span>
                                     <?= htmlspecialchars($accName) ?>
@@ -915,9 +978,9 @@ foreach ($logs as $log) {
                     </div>
                     <div class="form-group">
                         <label>Amount Paid Now (₱) <span
-                                style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
+                                style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
                         <input type="number" name="amount_paid" id="edit_amount_paid" min="0" step="0.01"
-                            placeholder="Leave blank to skip">
+                            placeholder="Leave blank to skip" oninput="calculateEditFees()">
                     </div>
                     <div class="form-group">
                         <label>Payment Method</label>
@@ -932,17 +995,15 @@ foreach ($logs as $log) {
                         <label>Payment Remarks</label>
                         <input type="text" name="remarks" id="edit_remarks" placeholder="e.g. Balance payment, etc.">
                     </div>
-
                     <div class="form-group form-group-full">
                         <label>Notes</label>
                         <textarea name="notes" id="edit_notes"
                             placeholder="Optional notes about this customer or booking..."></textarea>
                     </div>
-
                     <div class="form-group form-group-full"
-                        style="background:var(--bg-light); padding:15px; border-radius:8px; text-align:right;">
-                        <span style="font-size:14px; color:var(--text-muted);">Total Expected Fees:</span>
-                        <strong style="font-size:24px; color:var(--accent-orange); display:block;">₱<span
+                        style="background:var(--bg-light);padding:15px;border-radius:8px;text-align:right;">
+                        <span style="font-size:14px;color:var(--text-muted);">Total Expected Fees:</span>
+                        <strong style="font-size:24px;color:var(--accent-orange);display:block;">₱<span
                                 id="display_edit_total">0.00</span></strong>
                     </div>
                 </div>
@@ -955,17 +1016,17 @@ foreach ($logs as $log) {
         </div>
     </div>
 
-    <!-- Checkout Modal -->
+    <!-- CHECKOUT MODAL -->
     <div id="checkoutModal" class="modal">
         <div class="modal-content" style="width:400px;">
             <h3>Confirm Check Out</h3>
-            <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">The check out time will be recorded
-                as right now. Proceed?</p>
+            <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">The check out time will be recorded as
+                right now. Proceed?</p>
             <form id="checkoutForm" method="POST" action="actions.php">
                 <input type="hidden" name="action" value="checkout">
                 <input type="hidden" name="customer_id" id="checkout_customer_id">
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-clear" style="background:none; color:var(--text-muted);"
+                    <button type="button" class="btn btn-clear" style="background:none;color:var(--text-muted);"
                         onclick="closeModal('checkoutModal')">Cancel</button>
                     <button type="submit" class="btn btn-success">Confirm Check Out</button>
                 </div>
@@ -974,63 +1035,65 @@ foreach ($logs as $log) {
     </div>
 
     <script>
-        // ── PHP data passed to JS ──────────────────────────────────────────────────
         const fees = <?= $settingsJson ?>;
-
-        // blockedAccNames: set of accommodation names occupied by an ACTIVE guest TODAY
-        // Used as the server-side baseline; we re-check on date change via AJAX.
         const serverBlockedToday = <?= json_encode(array_keys($blockedAccNames)) ?>;
-
-        // All accommodations with their data (for dynamic re-blocking on date change)
         const allAccommodations = <?= json_encode(array_values(array_map(function ($a) {
-            return [
-                'name' => $a['type'] . ' ' . $a['number'],
-                'price' => (float) $a['price_per_day'],
-                'status' => $a['status'],
-                'oos' => ($a['status'] === 'Out of Service'),
-            ];
+            return ['name' => $a['type'] . ' ' . $a['number'], 'price' => (float) $a['price_per_day'], 'status' => $a['status'], 'oos' => ($a['status'] === 'Out of Service')];
         }, $accommodationsList))) ?>;
 
         const RATES = {
-            daytour: {
-                adult: parseFloat(fees.fee_adult_day) || 50,
-                child: parseFloat(fees.fee_child_day) || 30,
-                senior: parseFloat(fees.fee_senior_day) || 40
-            },
-            overnight: {
-                adult: parseFloat(fees.fee_adult_overnight) || 80,
-                child: parseFloat(fees.fee_child_overnight) || 50,
-                senior: parseFloat(fees.fee_senior_overnight) || 70
-            }
+            daytour: { adult: parseFloat(fees.fee_adult_day) || 50, child: parseFloat(fees.fee_child_day) || 30, senior: parseFloat(fees.fee_senior_day) || 40 },
+            overnight: { adult: parseFloat(fees.fee_adult_overnight) || 80, child: parseFloat(fees.fee_child_overnight) || 50, senior: parseFloat(fees.fee_senior_overnight) || 70 }
         };
 
         // ── Modal helpers ──────────────────────────────────────────────────────────
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openCheckoutModal(customerId) {
-            document.getElementById('checkout_customer_id').value = customerId;
-            openModal('checkoutModal');
-        }
+        function openCheckoutModal(id) { document.getElementById('checkout_customer_id').value = id; openModal('checkoutModal'); }
 
-        // ── Entrance fee calc ──────────────────────────────────────────────────────
+        // ── Entrance fee ──────────────────────────────────────────────────────────
         function getEntranceFee(adults, seniors, children, isOvernight) {
             const r = isOvernight ? RATES.overnight : RATES.daytour;
             return (adults * r.adult) + (seniors * r.senior) + (children * r.child);
         }
 
-        // ── ADD modal: accommodation picker ───────────────────────────────────────
+        // ── Auto check-in time ────────────────────────────────────────────────────
+        // Room/Dorm → 14:00 | Cottage → 17:00 | Daytour/none → 07:00
+        function autoSetCheckInTime(pickerId, inputId, hintId) {
+            const cards = [...document.querySelectorAll('#' + pickerId + ' .acc-card.selected')];
+            const names = cards.map(c => c.dataset.name.toLowerCase());
+            const hasRoom = names.some(n => n.startsWith('room'));
+            const hasDorm = names.some(n => n.startsWith('dormitory'));
+            const hasCottage = names.some(n => n.startsWith('cottage'));
 
-        /**
-         * Re-evaluate which cards should be blocked in the ADD picker based on the
-         * selected check-in date.  We do a lightweight AJAX call to the server so we
-         * can ask "which accommodations are occupied on DATE X?".
-         */
+            const input = document.getElementById(inputId);
+            const hint = document.getElementById(hintId);
+
+            // Preserve the date, only replace the time
+            const existing = input.value || '';
+            const datePart = existing.includes('T') ? existing.split('T')[0] : (function () {
+                const n = new Date(), p = x => String(x).padStart(2, '0');
+                return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+            })();
+
+            let time, hintText;
+            if (hasRoom || hasDorm) {
+                time = '14:00'; hintText = '🏠 Room/Dorm — 2:00 PM check-in (window: 2pm–11am)';
+            } else if (hasCottage) {
+                time = '17:00'; hintText = '🛖 Cottage — 5:00 PM check-in (window: 5pm–7am)';
+            } else {
+                time = '07:00'; hintText = cards.length ? '☀️ Daytour — 7:00 AM check-in (window: 7am–5pm)' : '';
+            }
+
+            input.value = datePart + 'T' + time;
+            if (hint) hint.textContent = hintText;
+        }
+
+        // ── ADD picker ────────────────────────────────────────────────────────────
         function refreshAddPicker() {
             const dateStr = document.getElementById('add_check_in_time').value;
             if (!dateStr) return;
-            const date = dateStr.split('T')[0]; // YYYY-MM-DD
-
-            fetch('get_blocked_accs.php?date=' + encodeURIComponent(date))
+            fetch('funcs/get_blocked_accs.php?date=' + encodeURIComponent(dateStr.split('T')[0]))
                 .then(r => r.json())
                 .then(blocked => {
                     document.querySelectorAll('#acc_picker .acc-card').forEach(card => {
@@ -1038,47 +1101,39 @@ foreach ($logs as $log) {
                         const isBlocked = blocked.includes(card.dataset.name) || isOos;
                         card.dataset.blocked = isBlocked ? '1' : '0';
                         card.classList.toggle('blocked-today', isBlocked);
-                        // Deselect if now blocked
                         if (isBlocked) card.classList.remove('selected');
                     });
                     syncAccPicker();
                 })
-                .catch(() => { }); // silently fail — server-side defaults still apply
+                .catch(() => { });
         }
 
         function toggleAccCard(card) {
-            if (card.dataset.blocked === '1') return;
-            card.classList.toggle('selected');
+            // Walk up to the actual .acc-card in case a child element was clicked
+            const el = card.closest('.acc-card');
+            if (!el || el.dataset.blocked === '1') return;
+            el.classList.toggle('selected');
             syncAccPicker();
         }
 
         function syncAccPicker() {
-            const cards = document.querySelectorAll('#acc_picker .acc-card.selected');
-            const names = [], prices = [];
-            cards.forEach(c => { names.push(c.dataset.name); prices.push(parseFloat(c.dataset.price) || 0); });
-            const totalAccFee = prices.reduce((a, b) => a + b, 0);
+            const selected = [...document.querySelectorAll('#acc_picker .acc-card.selected')];
+            const names = selected.map(c => c.dataset.name);
+            const total = selected.reduce((s, c) => s + (parseFloat(c.dataset.price) || 0), 0);
             document.getElementById('hidden_accommodation').value = names.join(', ');
-            document.getElementById('accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('accommodation_fee').value = total.toFixed(2);
             document.getElementById('acc_selected_summary').textContent =
-                names.length ? names.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+                names.length ? names.join(', ') + '  —  ₱' + total.toFixed(2) : 'None selected';
+            autoSetCheckInTime('acc_picker', 'add_check_in_time', 'add_checkin_hint');
             calculateFees();
         }
 
-        // ── EDIT modal: accommodation picker ──────────────────────────────────────
-
-        /**
-         * Re-evaluate blocking for the EDIT picker.
-         * We exclude the *current record's own* accommodations from blocking
-         * (a record being edited should be able to keep its own rooms).
-         * The current record ID is stored in edit_customer_id.
-         */
+        // ── EDIT picker ───────────────────────────────────────────────────────────
         function refreshEditPicker() {
             const dateStr = document.getElementById('edit_check_in_time').value;
-            if (!dateStr) return;
-            const date = dateStr.split('T')[0];
             const recordId = document.getElementById('edit_customer_id').value;
-
-            fetch('get_blocked_accs.php?date=' + encodeURIComponent(date) + '&exclude_id=' + encodeURIComponent(recordId))
+            if (!dateStr) return;
+            fetch('funcs/get_blocked_accs.php?date=' + encodeURIComponent(dateStr.split('T')[0]) + '&exclude_id=' + encodeURIComponent(recordId))
                 .then(r => r.json())
                 .then(blocked => {
                     document.querySelectorAll('#edit_acc_picker .acc-card').forEach(card => {
@@ -1094,39 +1149,38 @@ foreach ($logs as $log) {
         }
 
         function toggleEditAccCard(card) {
-            if (card.dataset.blocked === '1') return;
-            card.classList.toggle('selected');
+            const el = card.closest('.acc-card');
+            if (!el || el.dataset.blocked === '1') return;
+            el.classList.toggle('selected');
             syncEditAccPicker();
         }
 
         function syncEditAccPicker() {
-            const cards = document.querySelectorAll('#edit_acc_picker .acc-card.selected');
-            const names = [], prices = [];
-            cards.forEach(c => { names.push(c.dataset.name); prices.push(parseFloat(c.dataset.price) || 0); });
-            const totalAccFee = prices.reduce((a, b) => a + b, 0);
+            const selected = [...document.querySelectorAll('#edit_acc_picker .acc-card.selected')];
+            const names = selected.map(c => c.dataset.name);
+            const total = selected.reduce((s, c) => s + (parseFloat(c.dataset.price) || 0), 0);
             document.getElementById('edit_hidden_accommodation').value = names.join(', ');
-            document.getElementById('edit_accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('edit_accommodation_fee').value = total.toFixed(2);
             document.getElementById('edit_acc_selected_summary').textContent =
-                names.length ? names.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+                names.length ? names.join(', ') + '  —  ₱' + total.toFixed(2) : 'None selected';
+            autoSetCheckInTime('edit_acc_picker', 'edit_check_in_time', 'edit_checkin_hint');
             calculateEditFees();
         }
 
-        // ── Fee calculations ───────────────────────────────────────────────────────
+        // ── Fee calculations ──────────────────────────────────────────────────────
         function calculateFees() {
             const adults = parseInt(document.getElementById('adults').value) || 0;
             const seniors = parseInt(document.getElementById('seniors').value) || 0;
             const children = parseInt(document.getElementById('children').value) || 0;
             const accFee = parseFloat(document.getElementById('accommodation_fee').value) || 0;
+            const paid = parseFloat(document.getElementById('add_amount_paid').value) || 0;
             const isOver = document.getElementById('overnight_toggle').checked;
-
-            const totalPax = adults + seniors + children;
-            const entranceFee = getEntranceFee(adults, seniors, children, isOver);
-            const totalAmount = entranceFee + accFee;
-
-            document.getElementById('hidden_pax').value = totalPax;
-            document.getElementById('hidden_entrance_fee').value = entranceFee.toFixed(2);
-            document.getElementById('hidden_total_amount').value = totalAmount.toFixed(2);
-            document.getElementById('display_total').innerText = totalAmount.toFixed(2);
+            const entrance = getEntranceFee(adults, seniors, children, isOver);
+            const total = entrance + accFee - paid;
+            document.getElementById('hidden_pax').value = adults + seniors + children;
+            document.getElementById('hidden_entrance_fee').value = entrance.toFixed(2);
+            document.getElementById('hidden_total_amount').value = total.toFixed(2);
+            document.getElementById('display_total').innerText = total.toFixed(2);
         }
 
         function calculateEditFees() {
@@ -1134,20 +1188,20 @@ foreach ($logs as $log) {
             const seniors = parseInt(document.getElementById('edit_seniors').value) || 0;
             const children = parseInt(document.getElementById('edit_children').value) || 0;
             const accFee = parseFloat(document.getElementById('edit_accommodation_fee').value) || 0;
+            const alreadyPaid = parseFloat(document.getElementById('edit_customer_id').dataset.totalPaid) || 0;
+            const newPayment = parseFloat(document.getElementById('edit_amount_paid').value) || 0;
             const isOver = document.getElementById('edit_overnight_toggle').checked;
-
-            const totalPax = adults + seniors + children;
-            const entranceFee = getEntranceFee(adults, seniors, children, isOver);
-            const totalAmount = entranceFee + accFee;
-
-            document.getElementById('hidden_edit_pax').value = totalPax;
-            document.getElementById('hidden_edit_entrance_fee').value = entranceFee.toFixed(2);
-            document.getElementById('hidden_edit_total_amount').value = totalAmount.toFixed(2);
-            document.getElementById('display_edit_total').innerText = totalAmount.toFixed(2);
+            const entrance = getEntranceFee(adults, seniors, children, isOver);
+            const total = entrance + accFee;
+            const balance = total - alreadyPaid - newPayment;
+            document.getElementById('hidden_edit_pax').value = adults + seniors + children;
+            document.getElementById('hidden_edit_entrance_fee').value = entrance.toFixed(2);
+            document.getElementById('hidden_edit_total_amount').value = total.toFixed(2);
+            document.getElementById('display_edit_total').innerText = balance.toFixed(2);
         }
 
-        // ── Open Edit Modal ────────────────────────────────────────────────────────
-        function openEditModal(id, name, contact, type, adults, seniors, children, acc, overnight, entrance, acc_fee, payment, checkIn, notes) {
+        // ── Open Edit Modal ───────────────────────────────────────────────────────
+        function openEditModal(id, name, contact, type, adults, seniors, children, acc, overnight, entrance, acc_fee, payment, checkIn, notes, total_paid) {
             document.getElementById('edit_customer_id').value = id;
             document.getElementById('edit_check_in_time').value = checkIn;
             document.getElementById('edit_customer_name').value = name;
@@ -1160,35 +1214,102 @@ foreach ($logs as $log) {
             document.getElementById('edit_notes').value = notes || '';
             document.getElementById('edit_amount_paid').value = '';
             document.getElementById('edit_remarks').value = '';
-
-            // Set overnight toggle
+            document.getElementById('edit_customer_id').dataset.totalPaid = total_paid;
             document.getElementById('edit_overnight_toggle').checked = (overnight === 'Yes');
 
-            // Pre-select accommodations (all selectable in edit — blocking refreshed below)
+            // Pre-select accommodations
             const selectedNames = acc ? acc.split(', ').map(s => s.trim()) : [];
-            let totalAccFee = 0;
+            let accTotal = 0;
             document.querySelectorAll('#edit_acc_picker .acc-card').forEach(card => {
-                // Reset blocked state first (will be re-applied by refreshEditPicker)
                 card.dataset.blocked = '0';
                 card.classList.remove('blocked-today');
                 if (selectedNames.includes(card.dataset.name)) {
                     card.classList.add('selected');
-                    totalAccFee += parseFloat(card.dataset.price) || 0;
+                    accTotal += parseFloat(card.dataset.price) || 0;
                 } else {
                     card.classList.remove('selected');
                 }
             });
             document.getElementById('edit_hidden_accommodation').value = selectedNames.join(', ');
-            document.getElementById('edit_accommodation_fee').value = totalAccFee.toFixed(2);
+            document.getElementById('edit_accommodation_fee').value = accTotal.toFixed(2);
             document.getElementById('edit_acc_selected_summary').textContent =
-                selectedNames.length ? selectedNames.join(', ') + '  —  ₱' + totalAccFee.toFixed(2) : 'None selected';
+                selectedNames.length ? selectedNames.join(', ') + '  —  ₱' + accTotal.toFixed(2) : 'None selected';
+
+            // Show hint without overriding the saved check-in time
+            const lc = selectedNames.map(n => n.toLowerCase());
+            const hint = document.getElementById('edit_checkin_hint');
+            if (hint) {
+                if (lc.some(n => n.startsWith('room')) || lc.some(n => n.startsWith('dormitory')))
+                    hint.textContent = '🏠 Room/Dorm — window: 2pm–11am';
+                else if (lc.some(n => n.startsWith('cottage')))
+                    hint.textContent = '🛖 Cottage — window: 5pm–7am';
+                else
+                    hint.textContent = selectedNames.length ? '☀️ Daytour — window: 7am–5pm' : '';
+            }
 
             calculateEditFees();
             openModal('editModal');
-
-            // Refresh blocking for this record's date (excluding itself)
             refreshEditPicker();
         }
+
+        // ── Calendar ──────────────────────────────────────────────────────────────
+        let currentCalendarDate = new Date();
+        let globalSelectedDateStr = '';
+
+        function initCalendar() { renderCalendarStructure(); }
+
+        function renderCalendarStructure() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            document.getElementById('calendarMonthYear').innerText = months[month] + ' ' + year;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const grid = document.getElementById('calendarDatesGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                cell.innerText = day;
+                const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                cell.dataset.date = ds;
+                cell.style.cssText = 'padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;background:#fff;border:1px solid var(--border-color);transition:all 0.2s;';
+                if (ds === globalSelectedDateStr) { cell.style.background = 'var(--primary-blue)'; cell.style.color = '#fff'; }
+                cell.onmouseenter = () => { if (cell.dataset.date !== globalSelectedDateStr) cell.style.background = '#EFF6FF'; };
+                cell.onmouseleave = () => { if (cell.dataset.date !== globalSelectedDateStr) cell.style.background = '#fff'; };
+                cell.onclick = () => selectCalendarDate(ds);
+                grid.appendChild(cell);
+            }
+        }
+
+        function changeMonth(dir) { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); renderCalendarStructure(); }
+
+        function selectCalendarDate(dateString) {
+            globalSelectedDateStr = dateString;
+            renderCalendarStructure();
+            document.getElementById('selectedDateLabel').innerText = new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const container = document.getElementById('calendarReservationsContainer');
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">Loading...</p>';
+            fetch('funcs/get_calendar_reservations.php?date=' + encodeURIComponent(dateString))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.length) { container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;font-style:italic;">No entries recorded for this date.</p>'; return; }
+                    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:var(--bg-light);"><th style="padding:6px;font-size:11px;">Customer</th><th style="padding:6px;font-size:11px;">Type</th><th style="padding:6px;font-size:11px;">Accomm.</th><th style="padding:6px;font-size:11px;">Pax</th></tr></thead><tbody>';
+                    data.forEach(r => {
+                        html += '<tr style="border-bottom:1px solid var(--border-color);"><td style="padding:8px;font-weight:600;color:var(--text-dark);">' + r.customer_name + '</td><td style="padding:8px;"><span style="background:#EBF5FF;color:#1E429F;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">' + r.customer_type + '</span></td><td style="padding:8px;color:var(--text-muted);">' + (r.accommodation || '--') + '</td><td style="padding:8px;text-align:center;">' + r.pax + '</td></tr>';
+                    });
+                    container.innerHTML = html + '</tbody></table>';
+                })
+                .catch(() => { container.innerHTML = '<p style="color:var(--danger-red);font-size:14px;">Error reading logs from database.</p>'; });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCalendar();
+            selectCalendarDate(new Date().toISOString().split('T')[0]);
+        });
     </script>
 
 </body>
